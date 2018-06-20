@@ -1,7 +1,8 @@
 import React, { Component } from 'react';
 import logo from './logo.svg';
 import './App.css';
-import { Ex7Component } from './Ex7ComponentWD';
+import { Ex7Component } from './exercises/Ex7ComponentWD';
+const statusForAll = require('./exercises/Ex15StatusForAll').statusForAll 
 
 class App extends Component {
   render() {
@@ -14,10 +15,25 @@ class App extends Component {
         <p className="App-intro">
           To get started, edit <code>src/App.js</code> and save to reload.
         </p>
-        <Ex7Component url='http://api.github.com' timeInterval={1000} callback={(statusCode) => console.log('Callback Status Code : ' + statusCode)}><h1>TESTE</h1></Ex7Component>
+        {testEx15StatusForAll()}
       </div>
     );
   }
+}
+
+function testEx7Component(){
+    const cb = (statusCode) => console.log('Callback Status Code : ' + statusCode);
+    const url = 'http://api.github.com';
+    const time = 1000;
+    return <Ex7Component url={url} timeInterval={time} callback={cb}><h1>TESTE</h1></Ex7Component>;
+}
+
+function testEx15StatusForAll(){
+    const urls = ['http://api.github.com', 'http://', 'http://api.github.com']
+    statusForAll(urls).then(codes => {
+        for(let i = 0; i < codes.length; i++)
+            console.log(codes[i])
+    }).catch(err => console.log(err));        
 }
 
 export default App;
