@@ -3,7 +3,7 @@ module.exports = {
 }
 
 function statusForAll(urls) {
-    function singleRequest(url) {
+    function request(url) {
         return fetch(url)
             .then(response => {
                 const statusCode = response.status;
@@ -12,5 +12,5 @@ function statusForAll(urls) {
                 return response.status;
             });
     }
-    return Promise.all(urls.map(url => singleRequest(url)))
+    return Promise.all(urls.map(url => request(url)));
 }
