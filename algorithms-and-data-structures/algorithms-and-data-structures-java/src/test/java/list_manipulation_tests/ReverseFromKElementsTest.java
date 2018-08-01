@@ -42,7 +42,39 @@ public class ReverseFromKElementsTest {
     }
 
     @Test
-    public void testAlgorithm(){
+    public void testSingleElementList(){
+        Node<Integer> n1 = REVERSE_K_FROM_K_ELEMENTS.new Node<>(1);
+
+        Node<Integer> result1 = ReverseKFromKElements.reverseKFromKElements(n1, 3);
+
+        int [] expectedValues = {1};
+
+        int i = 0;
+        while(result1.getNext() != null){
+            Assert.assertEquals(expectedValues[i++], (int)result1.getValue());
+            result1 = result1.getNext();
+        }
+    }
+
+    @Test
+    public void testTwoElementList(){
+        Node<Integer> n1 = REVERSE_K_FROM_K_ELEMENTS.new Node<>(1);
+        Node<Integer> n2 = REVERSE_K_FROM_K_ELEMENTS.new Node<>(2);
+        n1.setNext(n2);
+
+        Node<Integer> result1 = ReverseKFromKElements.reverseKFromKElements(n1, 3);
+
+        int [] expectedValues = {2,1};
+
+        int i = 0;
+        while(result1.getNext() != null){
+            Assert.assertEquals(expectedValues[i++], (int)result1.getValue());
+            result1 = result1.getNext();
+        }
+    }
+
+    @Test
+    public void testSeveralElementsList(){
         Node<Integer> n1 = REVERSE_K_FROM_K_ELEMENTS.new Node<>(1);
         Node<Integer> n2 = REVERSE_K_FROM_K_ELEMENTS.new Node<>(2);
         Node<Integer> n3 = REVERSE_K_FROM_K_ELEMENTS.new Node<>(3);

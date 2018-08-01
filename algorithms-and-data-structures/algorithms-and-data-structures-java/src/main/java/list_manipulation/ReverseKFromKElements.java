@@ -5,7 +5,7 @@ public class ReverseKFromKElements {
     /*
      * This is the exercise number 1 of List Manipulation, Algorithms and Data Structures.
      * The wiki can be found here: https://github.com/baltasarb/notes/wiki/Algorithms-and-Data-Structures#1
-     * The repo can be found here:
+     * The repo can be found here: https://github.com/baltasarb/notes/blob/master/algorithms-and-data-structures/algorithms-and-data-structures-java/src/main/java/list_manipulation/ReverseKFromKElements.java
      *
      * 1) Implement the static method:  public static <E> Node<E> reverseFromKElements(Node<E> list, int k)
      *
@@ -17,30 +17,27 @@ public class ReverseKFromKElements {
      * */
 
     public static <E> Node<E> reverseKFromKElements(Node<E> list, int k) {
-        int kCounter = 0;
+        int kCounter = 1;
 
         Node<E> root = list;
         Node<E> currentNode = list;
-        Node<E> previous = null;
+        Node<E> previous = currentNode;
         Node<E> listHead = null;
 
-        while (currentNode != null) {
+        currentNode = currentNode.getNext();
+
+        //single element list
+        if(currentNode == null)
+            return list;
+
+        while (true) {
             //end of the first sublist
-            if (kCounter == k) {
+            if (kCounter++ == k) {
                 if (listHead == null) {
                     listHead = root;
                 }
                 root = currentNode;
                 kCounter = 0;
-            }
-
-            kCounter++;
-
-            //first element of the list
-            if (previous == null) {
-                previous = currentNode;
-                currentNode = currentNode.getNext();
-                continue;
             }
 
             Node<E> next = currentNode.getNext();
@@ -53,6 +50,9 @@ public class ReverseKFromKElements {
                 }
                 previous.setNext(null);
                 currentNode.setNext(root);
+                if(listHead == null){
+                    listHead = root;
+                }
                 return listHead;
             }
 
@@ -61,8 +61,6 @@ public class ReverseKFromKElements {
             previous.setNext(next);
             currentNode = next;
         }
-
-        return listHead;
     }
 
     //returns the root of the new list
