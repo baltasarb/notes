@@ -17,50 +17,11 @@ public class ReverseKFromKElements {
      * */
 
     public static <E> Node<E> reverseKFromKElements(Node<E> list, int k) {
-        int kCounter = 1;
+      return null;
+    }
 
-        Node<E> root = list;
-        Node<E> currentNode = list;
-        Node<E> previous = currentNode;
-        Node<E> listHead = null;
-
-        currentNode = currentNode.getNext();
-
-        //single element list
-        if(currentNode == null)
-            return list;
-
-        while (true) {
-            //end of the first sublist
-            if (kCounter++ == k) {
-                if (listHead == null) {
-                    listHead = root;
-                }
-                root = currentNode;
-                kCounter = 0;
-            }
-
-            Node<E> next = currentNode.getNext();
-
-            //last element of the list
-            if (next == null) {
-                //the last but not reversable node
-                if (currentNode.equals(root)) {
-                    return listHead;
-                }
-                previous.setNext(null);
-                currentNode.setNext(root);
-                if(listHead == null){
-                    listHead = root;
-                }
-                return listHead;
-            }
-
-            currentNode.setNext(root);
-            root = currentNode;
-            previous.setNext(next);
-            currentNode = next;
-        }
+    public static <E> Node<E> reverseKFromKElementsWithStack(Node<E> list, int k) {
+        return null;
     }
 
     //returns the root of the new list

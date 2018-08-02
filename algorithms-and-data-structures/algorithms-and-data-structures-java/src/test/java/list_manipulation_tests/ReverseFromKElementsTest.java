@@ -50,7 +50,7 @@ public class ReverseFromKElementsTest {
         int [] expectedValues = {1};
 
         int i = 0;
-        while(result1.getNext() != null){
+        while(result1 != null){
             Assert.assertEquals(expectedValues[i++], (int)result1.getValue());
             result1 = result1.getNext();
         }
@@ -67,7 +67,7 @@ public class ReverseFromKElementsTest {
         int [] expectedValues = {2,1};
 
         int i = 0;
-        while(result1.getNext() != null){
+        while(result1 != null){
             Assert.assertEquals(expectedValues[i++], (int)result1.getValue());
             result1 = result1.getNext();
         }
@@ -96,7 +96,7 @@ public class ReverseFromKElementsTest {
         int [] expectedValues = {3,2,1,6,5,4,8,7};
 
         int i = 0;
-        while(result1.getNext() != null){
+        while(result1 != null){
             Assert.assertEquals(expectedValues[i++], (int)result1.getValue());
             result1 = result1.getNext();
         }
@@ -125,7 +125,7 @@ public class ReverseFromKElementsTest {
         int [] expectedValues = {8,7,6,5,4,3,2,1};
 
         int i = 0;
-        while(result1.getNext() != null){
+        while(result1 != null){
             Assert.assertEquals(expectedValues[i++], (int)result1.getValue());
             result1 = result1.getNext();
         }
