@@ -23,12 +23,8 @@ public class ReverseKFromKElements {
             throw new InvalidParameterException("The parameter list cannot be null.");
         }
 
-        if(k < 0){
+        if (k < 0) {
             throw new InvalidParameterException("The parameter k cannot be less than zero.");
-        }
-
-        if(k == 0){
-            return list;
         }
 
         int kCounter = 1;
@@ -36,6 +32,7 @@ public class ReverseKFromKElements {
         Node<E> previousSublistTail = null,
                 currentSublistRoot = null,
                 listHead = null;
+
         do {
             //first element of the sublist
             if (kCounter == 1) {
@@ -43,46 +40,40 @@ public class ReverseKFromKElements {
             }
 
             Node<E> next = list.getNext();
+
             if (kCounter++ >= k || next == null) {
-                kCounter = 1;
-
-                //last element of the list, before reaching k
-                if (next == null) {
-                    //single element list
-                    if (previousSublistTail == null) {
-                        return list;
-                    }
-
-                    currentSublistRoot = reverseList(currentSublistRoot);
-                    previousSublistTail.setNext(currentSublistRoot);
-
-                    if (listHead == null) {
-                        listHead = currentSublistRoot;
-                    }
-                    return listHead;
+                //single element list
+                if (next == null && previousSublistTail == null) {
+                    return list;
                 }
+
+                kCounter = 1;
 
                 Node<E> sublistTail = currentSublistRoot;
                 list.setNext(null);
-                Node<E> sublistRoot = reverseList(currentSublistRoot);
+                currentSublistRoot = reverseList(currentSublistRoot);
 
                 if (listHead == null) {
-                    listHead = sublistRoot;
+                    listHead = currentSublistRoot;
                 }
 
-                //first element
-                if (previousSublistTail == null) {
-                    previousSublistTail = sublistTail;
-                    sublistTail.setNext(next);
-                } else {
-                    previousSublistTail.setNext(sublistRoot);
-                    previousSublistTail = sublistTail;
-                    sublistTail.setNext(next);
+                //first sublist wont have a tail to attach the root to
+                if (previousSublistTail != null) {
+                    previousSublistTail.setNext(currentSublistRoot);
                 }
+
+                previousSublistTail = sublistTail;
+                sublistTail.setNext(next);
                 currentSublistRoot = list;
             }
             list = next;
-        } while (true);
+        } while (list != null);
+
+        return listHead;
+    }
+
+    private static void insertSublistIntoMainList() {
+
     }
 
     //returns the root of the new list
