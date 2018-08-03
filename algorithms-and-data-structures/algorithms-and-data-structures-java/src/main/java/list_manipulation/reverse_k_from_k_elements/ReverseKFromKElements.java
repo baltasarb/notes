@@ -1,5 +1,7 @@
 package list_manipulation.reverse_k_from_k_elements;
 
+import java.security.InvalidParameterException;
+
 public class ReverseKFromKElements {
 
     /*
@@ -17,11 +19,70 @@ public class ReverseKFromKElements {
      * */
 
     public static <E> Node<E> reverseKFromKElements(Node<E> list, int k) {
-      return null;
-    }
+        if (list == null) {
+            throw new InvalidParameterException("The parameter list cannot be null.");
+        }
 
-    public static <E> Node<E> reverseKFromKElementsWithStack(Node<E> list, int k) {
-        return null;
+        if(k < 0){
+            throw new InvalidParameterException("The parameter k cannot be less than zero.");
+        }
+
+        if(k == 0){
+            return list;
+        }
+
+        int kCounter = 1;
+
+        Node<E> previousSublistTail = null,
+                currentSublistRoot = null,
+                listHead = null;
+        do {
+            //first element of the sublist
+            if (kCounter == 1) {
+                currentSublistRoot = list;
+            }
+
+            Node<E> next = list.getNext();
+            if (kCounter++ >= k || next == null) {
+                kCounter = 1;
+
+                //last element of the list, before reaching k
+                if (next == null) {
+                    //single element list
+                    if (previousSublistTail == null) {
+                        return list;
+                    }
+
+                    currentSublistRoot = reverseList(currentSublistRoot);
+                    previousSublistTail.setNext(currentSublistRoot);
+
+                    if (listHead == null) {
+                        listHead = currentSublistRoot;
+                    }
+                    return listHead;
+                }
+
+                Node<E> sublistTail = currentSublistRoot;
+                list.setNext(null);
+                Node<E> sublistRoot = reverseList(currentSublistRoot);
+
+                if (listHead == null) {
+                    listHead = sublistRoot;
+                }
+
+                //first element
+                if (previousSublistTail == null) {
+                    previousSublistTail = sublistTail;
+                    sublistTail.setNext(next);
+                } else {
+                    previousSublistTail.setNext(sublistRoot);
+                    previousSublistTail = sublistTail;
+                    sublistTail.setNext(next);
+                }
+                currentSublistRoot = list;
+            }
+            list = next;
+        } while (true);
     }
 
     //returns the root of the new list
