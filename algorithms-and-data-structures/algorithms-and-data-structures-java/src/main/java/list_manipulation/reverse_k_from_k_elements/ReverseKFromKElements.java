@@ -27,6 +27,11 @@ public class ReverseKFromKElements {
             throw new InvalidParameterException("The parameter k cannot be less than zero.");
         }
 
+        //single element list
+        if (list.getNext() == null) {
+            return list;
+        }
+
         int kCounter = 1;
 
         Node<E> previousSublistTail = null,
@@ -42,17 +47,13 @@ public class ReverseKFromKElements {
             Node<E> next = list.getNext();
 
             if (kCounter++ >= k || next == null) {
-                //single element list
-                if (next == null && previousSublistTail == null) {
-                    return list;
-                }
-
                 kCounter = 1;
 
                 Node<E> sublistTail = currentSublistRoot;
                 list.setNext(null);
                 currentSublistRoot = reverseList(currentSublistRoot);
 
+                //first sublist root has to be saved to return the new reversed list
                 if (listHead == null) {
                     listHead = currentSublistRoot;
                 }
