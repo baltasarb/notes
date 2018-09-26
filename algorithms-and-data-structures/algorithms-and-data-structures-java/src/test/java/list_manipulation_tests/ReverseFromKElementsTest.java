@@ -32,7 +32,7 @@ public class ReverseFromKElementsTest {
         Node<Integer> n1 = new Node<>(1);
         Node<Integer> n2 = new Node<>(2);
         Node<Integer> n3 = new Node<>(3);
-        n1.setNext(n2);
+        n1.setNext (n2);
         n2.setNext(n3);
         int k = 0;
 

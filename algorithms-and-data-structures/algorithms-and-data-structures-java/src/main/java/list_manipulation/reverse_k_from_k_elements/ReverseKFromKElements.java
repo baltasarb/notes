@@ -28,7 +28,7 @@ public class ReverseKFromKElements {
         }
 
         //single element list
-        if (list.getNext() == null) {
+        if (list.next == null) {
             return list;
         }
 
@@ -44,13 +44,13 @@ public class ReverseKFromKElements {
                 currentSublistRoot = list;
             }
 
-            Node<E> next = list.getNext();
+            Node<E> next = list.next;
 
             if (kCounter++ >= k || next == null) {
                 kCounter = 1;
 
                 Node<E> sublistTail = currentSublistRoot;
-                list.setNext(null);
+                list.next = null;
                 currentSublistRoot = reverseList(currentSublistRoot);
 
                 //first sublist root has to be saved to return the new reversed list
@@ -60,11 +60,11 @@ public class ReverseKFromKElements {
 
                 //first sublist wont have a tail to attach the root to
                 if (previousSublistTail != null) {
-                    previousSublistTail.setNext(currentSublistRoot);
+                    previousSublistTail.next = currentSublistRoot;
                 }
 
                 previousSublistTail = sublistTail;
-                sublistTail.setNext(next);
+                sublistTail.next = next;
                 currentSublistRoot = list;
             }
             list = next;
@@ -73,19 +73,33 @@ public class ReverseKFromKElements {
         return listHead;
     }
 
-    private static void insertSublistIntoMainList() {
+    public static <E> Node<E> reverseKFromKElements2(Node<E> list, int k) {
 
+        int counter = 0;
+        Node<E> previous = null;
+        Node<E> current = list;
+        Node<E> next = null;
+
+        while(current != null){
+
+
+        }
+
+        return null;
     }
+
+
+
 
     //returns the root of the new list
     public static <E> Node<E> reverseList(Node<E> list) {
         Node<E> root = list;
-        list = list.getNext();
-        root.setNext(null);
+        list = list.next;
+        root.next = null;
 
         while (list != null) {
-            Node<E> next = list.getNext();
-            list.setNext(root);
+            Node<E> next = list.next;
+            list.next = root;
             root = list;
             list = next;
         }
