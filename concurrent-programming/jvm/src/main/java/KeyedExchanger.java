@@ -1,5 +1,6 @@
 import java.util.HashMap;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -26,7 +27,7 @@ public class KeyedExchanger<T> {
      *  establish waiting limit time
      *
      *  if time has expired
-     *      remove the other from the hashmap
+     *      remove the other (if present) from the hashmap
      *      return optional.empty
      *
      *  if the corresponding pair exists
@@ -53,10 +54,11 @@ public class KeyedExchanger<T> {
 
         try {
             monitor.lock();
+
             Exchanger other = exchangers.get(key);
 
             if (timeExpired(expirationTime)) {
-                if (other != null) {
+                if (other != null) {//maybe other keeps waiting for pair??
                     exchangers.remove(key);
                     other.condition.signal();
                 }
@@ -75,9 +77,24 @@ public class KeyedExchanger<T> {
             Exchanger me = new Exchanger(myData, monitor.newCondition());
             exchangers.put(key, me);
 
+            // todo
+            // !!! may be negative time !!!
+            // recalculation of time left
+            long timeToWait = expirationTime - System.currentTimeMillis();
+
             while (true) {
                 System.out.println("waiting...");
-                me.condition.await();
+                try{
+                    me.condition.await(timeToWait, TimeUnit.MILLISECONDS);
+                }catch (InterruptedException e){
+                    if (me.otherData != null) {
+                        Thread.currentThread().interrupt();
+                        return Optional.of(me.otherData);
+                    }
+                    if(exchangers.get(key) != null)
+                        exchangers.remove(key);
+                    throw e;
+                }
 
                 if (me.otherData != null) {
                     return Optional.of(me.otherData);
@@ -87,6 +104,11 @@ public class KeyedExchanger<T> {
                     exchangers.remove(key);
                     return Optional.empty();
                 }
+
+                // todo
+                // !!! may be negative time !!!
+                // recalculation of time left
+                timeToWait = expirationTime - System.currentTimeMillis();
 
             }
         } finally {
