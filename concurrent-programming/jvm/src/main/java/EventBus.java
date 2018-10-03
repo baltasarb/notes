@@ -34,18 +34,13 @@ public class EventBus {
             throw new InvalidStateException("The bus is shutting down and does not allow new subscriptions.");
         }
 
-        //informs the bus that a new subscriber has arrived
-        //usefull for correct shutdown, shutdown waits for this to reach 0
+        //informs the bus that a new subscriber has arrived, useful for correct shutdown, shutdown waits for this to reach 0
         numberOfSubscribers++;
 
         Subscriber subscriber = new Subscriber(monitor.newCondition());
 
         //if the type does not have a list, create it, then add the subscriber to it
-        if (subscribers.get(consumerType) == null) {
-            LinkedList<Subscriber> subscribersByType = new LinkedList<>();
-            subscribers.put(consumerType, subscribersByType);
-        }
-        subscribers.get(consumerType).add(subscriber);
+        addNewSubscriberToSubscribersMap(consumerType, subscriber);
 
         try {
             while (true) {
@@ -59,17 +54,12 @@ public class EventBus {
                 //  on notification, check if there are messages to process and handle them if there are
                 if (!subscriber.messages.isEmpty()) {
 
-                    //  grab all messages and empty existing list, avoids further publishing to this list
-                    LinkedList<Object> messages = subscriber.messages;
-                    subscriber.messages = new LinkedList<>();
-
                     //  sets flag to true so that the publisher knows if notification is needed to awake the subscriber
                     subscriber.isHandlingMessages = true;
 
-                    //  handling outside the lock to avoid deadlocks: handler work is unknown
                     monitor.unlock();
-
-                    handleMessages(messages, handler);
+                    //  handling outside the lock to avoid deadlocks: handler work is unknown
+                    handleMessages(subscriber, handler);
                 }
 
                 monitor.lock();
@@ -82,13 +72,7 @@ public class EventBus {
 
                 // if a shutdown is occurring guarantee that no more messages are left to publish before exit
                 if (isShuttingDown && subscriber.messages.isEmpty()) {
-                    numberOfSubscribers--;
-                    subscribers.get(consumerType).remove(subscriber);
-
-                    //last subscriber to exit, ready to shutdown completely, notify the shutdown agent
-                    if(numberOfSubscribers == 0)
-                        shutdown.signal();
-
+                    attemptShutdown(subscriber, consumerType);
                     monitor.unlock();
                     return;
                 }
@@ -101,6 +85,42 @@ public class EventBus {
         }
     }
 
+    /**
+     * @param subscriberType the key to use on the hasmap
+     * @param subscriber the value to add to the key's corresponding list
+     */
+    private void addNewSubscriberToSubscribersMap(Class subscriberType, Subscriber subscriber){
+        if (subscribers.get(subscriberType) == null) {
+            LinkedList<Subscriber> subscribersByType = new LinkedList<>();
+            subscribers.put(subscriberType, subscribersByType);
+        }
+        subscribers.get(subscriberType).add(subscriber);
+    }
+
+    private <T> void handleMessages (Subscriber subscriber, Consumer<T> handler) throws InterruptedException {
+        //  grab all messages and empty existing list, avoids further publishing to this list
+        LinkedList<Object> messages = subscriber.messages;
+        subscriber.messages = new LinkedList<>();
+
+        while (messages.size() > 0) {
+            T message = (T) messages.removeFirst();
+            try {
+                handler.accept(message);
+            } catch (Exception e) {
+                String errorMessage = String.format("Handler error : %s", e.getMessage());
+                throw new InterruptedException(errorMessage);
+            }
+        }
+    }
+
+    private void attemptShutdown(Subscriber subscriber, Class consumerType){
+        numberOfSubscribers--;
+        subscribers.get(consumerType).remove(subscriber);
+
+        //if this is the last subscriber to exit then notify the shutdown agent
+        if(numberOfSubscribers == 0)
+            shutdown.signal();
+    }
 
     public <E> void PublishEvent(E message) {
         monitor.lock();
@@ -154,18 +174,11 @@ public class EventBus {
         }
     }
 
-    private <T> void handleMessages (LinkedList<Object> messages, Consumer<T> handler) throws InterruptedException {
-        while (messages.size() > 0) {
-            T message = (T) messages.removeFirst();
-            try {
-                handler.accept(message);
-            } catch (Exception e) {
-                String errorMessage = String.format("Handler error : %s", e.getMessage());
-                throw new InterruptedException(errorMessage);
-            }
-        }
-    }
-
+    /**
+     * This class has two purposes:
+     *  save messages published by the publishEvent method
+     *  save the condition for each subscriber, allowing for specific notification
+     */
     private class Subscriber {
         private final Condition condition;
         private LinkedList<Object> messages;
@@ -184,6 +197,5 @@ public class EventBus {
         boolean isFull() {
             return messages.size() >= MAX_PENDING;
         }
-
     }
 }
