@@ -15,100 +15,91 @@ public class KeyedExchanger<T> {
     }
 
     /**
-     *
-     * @param key the pair key, belonging to at least two different threads
-     * @param myData the data that the calling thread wants to give to the other
+     * @param key     the pair key, belonging to at least two different threads
+     * @param myData  the data that the calling thread wants to give to the other
      * @param timeout the time the current thread is willing to wait for the data of another thread
      * @return the data exchanged or an empty optional
-     * @throws InterruptedException
-     *
-     *  The algorithm behaves as such:
-     *
-     *  establish waiting limit time
-     *
-     *  if time has expired
-     *      remove the other (if present) from the hashmap
-     *      return optional.empty
-     *
-     *  if the corresponding pair exists
-     *     give the corresponding object the data
-     *     remove it from the hashmap
-     *     notify it so it can return the new data.
-     *     return the data exchanged with the other object of the pair
-     *
-     *  else
-     *      create exchanger object and add to hashmap
-     *      wait for another exchanger to arrive
-     *
-     *  on wait exit
-     *      if exit was from notify
-     *          return the new data
-     *      if time has expired
-     *          remove from hasmap
-     *          return
-     *      else
-     *          keep waiting
+     * @throws InterruptedException propagates thread interruption
+     *                              <p>
+     *                              The algorithm behaves as such:
+     *                              <p>
+     *                              establish waiting limit time
+     *                              <p>
+     *                              if time has expired
+     *                              return optional.empty
+     *                              <p>
+     *                              if the corresponding pair exists
+     *                              give the corresponding object the data
+     *                              remove it from the hashmap
+     *                              notify it so it can return the new data.
+     *                              return the data exchanged with the other object of the pair
+     *                              else
+     *                              create exchanger object and add to hashmap
+     *                              wait for another exchanger to arrive
+     *                              <p>
+     *                              on wait exit
+     *                              if exit was from notify
+     *                              return the new data
+     *                              if time has expired
+     *                              remove from hasmap
+     *                              return
+     *                              else
+     *                              keep waiting
      */
     public Optional<T> exchange(int key, T myData, int timeout) throws InterruptedException {
-        long expirationTime = getExpirationTime(timeout);
+        Timer timer = new Timer(timeout);
+
+        if (timeout <= 0) {
+            return Optional.empty();
+        }
 
         try {
             monitor.lock();
 
             Exchanger other = exchangers.get(key);
 
-            if (timeExpired(expirationTime)) {
-                if (other != null) {//maybe other keeps waiting for pair??
-                    exchangers.remove(key);
-                    other.condition.signal();
-                }
-                return Optional.empty();
+            if (other != null) {
+                exchangers.remove(key);
+                Optional<T> data = Optional.of(other.data); //after being signaled data may no longer be available
+                other.data = myData;
+                other.condition.signal();
+                return data;
             }
 
-            if (other != null) {
-                System.out.println("Pair found!");
-                exchangers.remove(key);
-                Optional<T> otherData = Optional.of(other.myData); //after being signaled data may no longer be available
-                other.otherData = myData;
-                other.condition.signal();
-                return otherData;
+            if (timer.timeExpired()) {
+                return Optional.empty();
             }
 
             Exchanger me = new Exchanger(myData, monitor.newCondition());
             exchangers.put(key, me);
+            T myOriginalData = me.data;
 
-            // todo
-            // !!! may be negative time !!!
-            // recalculation of time left
-            long timeToWait = expirationTime - System.currentTimeMillis();
+            long timeToWait = timer.getTimeLeftToWait();
 
             while (true) {
-                System.out.println("waiting...");
-                try{
+                try {
                     me.condition.await(timeToWait, TimeUnit.MILLISECONDS);
-                }catch (InterruptedException e){
-                    if (me.otherData != null) {
+                } catch (InterruptedException e) {
+                    if (!me.data.equals(myOriginalData)) {
                         Thread.currentThread().interrupt();
-                        return Optional.of(me.otherData);
+                        return Optional.of(me.data);
                     }
-                    if(exchangers.get(key) != null)
+                    if (exchangers.get(key) != null)
                         exchangers.remove(key);
+
                     throw e;
                 }
 
-                if (me.otherData != null) {
-                    return Optional.of(me.otherData);
+                if (!me.data.equals(myOriginalData)) {
+                    return Optional.of(me.data);
                 }
 
-                if (timeExpired(expirationTime)) {
+                timeToWait = timer.getTimeLeftToWait();
+
+                if (timer.timeExpired() || timeToWait <= 0) {
                     exchangers.remove(key);
                     return Optional.empty();
                 }
-
-                // todo
-                // !!! may be negative time !!!
-                // recalculation of time left
-                timeToWait = expirationTime - System.currentTimeMillis();
 
             }
         } finally {
@@ -118,21 +109,30 @@ public class KeyedExchanger<T> {
     }
 
     private class Exchanger {
-        T myData;
-        T otherData;
+        T data;
         Condition condition;
 
-        Exchanger(T myData, Condition condition) {
-            this.myData = myData;
+        Exchanger(T data, Condition condition) {
+            this.data = data;
             this.condition = condition;
         }
     }
 
-    private boolean timeExpired(long timeToExpiration) {
-        return System.currentTimeMillis() > timeToExpiration;
+    private class Timer {
+        private final long expirationTime;
+
+        Timer(int timeout) {
+            expirationTime = System.currentTimeMillis() + timeout;
+        }
+
+        long getTimeLeftToWait() {
+            long timeLeftToWait = expirationTime - System.currentTimeMillis();
+            return timeLeftToWait <= 0 ? 0 : timeLeftToWait;
+        }
+
+        boolean timeExpired() {
+            return System.currentTimeMillis() > expirationTime;
+        }
     }
 
-    private long getExpirationTime(int timeout) {
-        return System.currentTimeMillis() + timeout;
-    }
 }
