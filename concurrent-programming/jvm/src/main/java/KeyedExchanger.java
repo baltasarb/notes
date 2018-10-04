@@ -72,7 +72,6 @@ public class KeyedExchanger<T> {
 
             Exchanger me = new Exchanger(myData, monitor.newCondition());
             exchangers.put(key, me);
-            T myOriginalData = me.data;
 
             long timeToWait = timer.getTimeLeftToWait();
 
@@ -80,7 +79,7 @@ public class KeyedExchanger<T> {
                 try {
                     me.condition.await(timeToWait, TimeUnit.MILLISECONDS);
                 } catch (InterruptedException e) {
-                    if (!me.data.equals(myOriginalData)) {
+                    if (!me.data.equals(myData)) {
                         Thread.currentThread().interrupt();
                         return Optional.of(me.data);
                     }
@@ -90,7 +89,7 @@ public class KeyedExchanger<T> {
                     throw e;
                 }
 
-                if (!me.data.equals(myOriginalData)) {
+                if (!me.data.equals(myData)) {
                     return Optional.of(me.data);
                 }
 
