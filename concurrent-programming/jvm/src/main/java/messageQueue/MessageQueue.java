@@ -29,7 +29,7 @@ public class MessageQueue<T> {
             waiter.setSentToTrue();
             waiter.getCondition().signal();
         } else {
-            waiter = new SendStatusImplementer<>(sentMsg, this::deleteMessage);
+            waiter = new SendStatusImplementer<>(monitor, sentMsg, this::deleteMessage);
             waiters.addLast(waiter);
         }
 
@@ -69,15 +69,18 @@ public class MessageQueue<T> {
 
         long timeLeft = timer.getTimeLeftToWait();
 
-        SendStatusImplementer<T> waiter = new SendStatusImplementer<>(this::deleteMessage);
+        SendStatusImplementer<T> waiter = new SendStatusImplementer<>(monitor, this::deleteMessage);
         waiters.addLast(waiter);
 
         try {
             while (true) {
                 waiter.getCondition().await(timeLeft, TimeUnit.MILLISECONDS);
 
-                if (waiter.isMessageCanceled())
+                if (waiter.isMessageCanceled()){
+                    System.out.println("canceled");
                     return Optional.empty(); //todo: or throw e??
+
+                }
 
                 T waiterMessage = waiter.getMessage();
                 if (waiterMessage != null) {

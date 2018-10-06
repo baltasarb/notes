@@ -16,16 +16,16 @@ public class SendStatusImplementer<T> implements SendStatus {
     private boolean messageCanceled;
     private Function<SendStatusImplementer, Boolean> messageCanceler;
 
-    public SendStatusImplementer(T message, Function<SendStatusImplementer, Boolean> messageCanceler) {
+    public SendStatusImplementer(ReentrantLock monitor, T message, Function<SendStatusImplementer, Boolean> messageCanceler) {
         this.message = message;
-        this.monitor = new ReentrantLock();
+        this.monitor = monitor;
         this.condition = monitor.newCondition();
         this.messageCanceler = messageCanceler;
         messageCanceled = false;
     }
 
-    public SendStatusImplementer(Function<SendStatusImplementer, Boolean> messageCanceler) {
-        this.monitor = new ReentrantLock();
+    public SendStatusImplementer(ReentrantLock monitor, Function<SendStatusImplementer, Boolean> messageCanceler) {
+        this.monitor = monitor;
         this.condition = monitor.newCondition();
         this.messageCanceler = messageCanceler;
     }
@@ -46,6 +46,7 @@ public class SendStatusImplementer<T> implements SendStatus {
         return messageCanceler.apply(this);
     }
 
+    //TODO AWAIT HAS THE SAME CONDITION AS RECEIVE , PROBLEM??
     @Override
     public boolean await(int timeout) throws InterruptedException {
 
@@ -57,14 +58,14 @@ public class SendStatusImplementer<T> implements SendStatus {
         Timer timer = new Timer(timeout);
         long timeLeft = timer.getTimeLeftToWait();
 
+        if (messageCanceled)
+            return false;//todo : or throw exception?
+
         if (isSent)
             return true;
 
         if (timer.timeExpired())
             return false;
-
-        if (messageCanceled)
-            return false;//todo : or throw exception?
 
         try {
             while (true) {
@@ -98,7 +99,9 @@ public class SendStatusImplementer<T> implements SendStatus {
     }
 
     public void signalAwait() {
+        monitor.lock();
         condition.signal();
+        monitor.unlock();
     }
 
     public void setSentToTrue() {
