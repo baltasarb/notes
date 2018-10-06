@@ -1,3 +1,5 @@
+import Utils.Timer;
+
 import java.util.HashMap;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -114,23 +116,6 @@ public class KeyedExchanger<T> {
         Exchanger(T data, Condition condition) {
             this.data = data;
             this.condition = condition;
-        }
-    }
-
-    private class Timer {
-        private final long expirationTime;
-
-        Timer(int timeout) {
-            expirationTime = System.currentTimeMillis() + timeout;
-        }
-
-        long getTimeLeftToWait() {
-            long timeLeftToWait = expirationTime - System.currentTimeMillis();
-            return timeLeftToWait <= 0 ? 0 : timeLeftToWait;
-        }
-
-        boolean timeExpired() {
-            return System.currentTimeMillis() > expirationTime;
         }
     }
 

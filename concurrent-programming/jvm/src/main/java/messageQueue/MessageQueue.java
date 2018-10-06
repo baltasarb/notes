@@ -3,7 +3,6 @@ package messageQueue;
 import java.util.LinkedList;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 import Utils.Timer;
@@ -12,33 +11,31 @@ import Utils.Timer;
 public class MessageQueue<T> {
 
     private ReentrantLock monitor;
-    private LinkedList<Receiver> receivers;
-    private LinkedList<SendStatus> messageStatuses;
+    private LinkedList<SendStatusImplementer<T>> waiters;
 
     public MessageQueue() {
         this.monitor = new ReentrantLock();
-        this.receivers = new LinkedList<>();
-        this.messageStatuses = new LinkedList<>();
+        this.waiters = new LinkedList<>();
     }
 
     public SendStatus send(T sentMsg) {
         monitor.lock();
 
-        MessageCanceler messageCanceler = new MessageCanceler();
-        SendStatusImplementer<T> sendStatusImplementer = new SendStatusImplementer<>(sentMsg, messageCanceler);
+        SendStatusImplementer<T> waiter;
 
-        if (!receivers.isEmpty()) {
-            Receiver receiver = receivers.removeFirst();
-            receiver.message = sentMsg;
-            receiver.condition.signal();
-            sendStatusImplementer.setSentToTrue();
+        if (!waiters.isEmpty()) {
+            waiter = waiters.getFirst();
+            waiter.setMessage(sentMsg);
+            waiter.setSentToTrue();
+            waiter.getCondition().signal();
+        } else {
+            waiter = new SendStatusImplementer<>(sentMsg, this::deleteMessage);
+            waiters.addLast(waiter);
         }
-
-        messageStatuses.addLast(sendStatusImplementer);
 
         monitor.unlock();
 
-        return sendStatusImplementer;
+        return waiter;
     }
 
     public Optional<T> receive(int timeout) throws InterruptedException {
@@ -50,8 +47,13 @@ public class MessageQueue<T> {
 
         Timer timer = new Timer(timeout);
 
-        if (!messageStatuses.isEmpty()) {
-            SendStatusImplementer<T> sendStatusImplementer = (SendStatusImplementer<T>) messageStatuses.removeFirst();
+        if (!waiters.isEmpty()) {
+            SendStatusImplementer<T> sendStatusImplementer = waiters.removeFirst();
+
+            if (sendStatusImplementer.isMessageCanceled())
+                return Optional.empty(); //todo: or throw e??
+
+
             sendStatusImplementer.setSentToTrue();
 
             //notification might be lost if no one is waiting
@@ -67,32 +69,31 @@ public class MessageQueue<T> {
 
         long timeLeft = timer.getTimeLeftToWait();
 
-        Receiver receiver = new Receiver(monitor.newCondition());
-        receivers.addLast(receiver);
+        SendStatusImplementer<T> waiter = new SendStatusImplementer<>(this::deleteMessage);
+        waiters.addLast(waiter);
 
         try {
             while (true) {
-                receiver.condition.await(timeLeft, TimeUnit.MILLISECONDS);
+                waiter.getCondition().await(timeLeft, TimeUnit.MILLISECONDS);
 
-                if(receiver.messageCanceler.cancelationIsRequired()){
-                    receivers.remove(receiver);
-                    return Optional.empty();
-                }
+                if (waiter.isMessageCanceled())
+                    return Optional.empty(); //todo: or throw e??
 
-                if (receiver.message != null) {
-                    return Optional.of(receiver.message);
+                T waiterMessage = waiter.getMessage();
+                if (waiterMessage != null) {
+                    return Optional.of(waiterMessage);
                 }
 
                 if (timer.timeExpired()) {
-                    receivers.remove(receiver);
+                    waiters.remove(waiter);
                     return Optional.empty();
                 }
             }
         } catch (InterruptedException e) {
-            if (receiver.message != null) {
+            T waiterMessage = waiter.getMessage();
+            if (waiterMessage != null) {
                 Thread.currentThread().interrupt();
-                T message = receiver.message;
-                return Optional.of(message);
+                return Optional.of(waiterMessage);
             }
             throw e;
         } finally {
@@ -100,20 +101,17 @@ public class MessageQueue<T> {
         }
     }
 
-    public boolean removeMessage(){
+    private boolean deleteMessage(SendStatusImplementer waiter) {
+        monitor.lock();
 
+        boolean success = false;
 
-        return false;
-    }
+        //if message is pending, otherwise no message to remove is present, waiting for receive
+        if (waiter.getMessage() != null)
+            success = waiters.remove(waiter);
 
-    private class Receiver {
-        private Condition condition;
-        private T message;
-        private MessageCanceler messageCanceler;
+        monitor.unlock();
 
-        public Receiver(Condition condition) {
-            this.condition = condition;
-            messageCanceler = new MessageCanceler();
-        }
+        return success;
     }
 }

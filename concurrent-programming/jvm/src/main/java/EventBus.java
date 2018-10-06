@@ -57,9 +57,13 @@ public class EventBus {
                     //  sets flag to true so that the publisher knows if notification is needed to awake the subscriber
                     subscriber.isHandlingMessages = true;
 
+                    //  grab all messages and empty existing list, avoids further publishing to this list
+                    LinkedList<Object> messages = subscriber.messages;
+                    subscriber.messages = new LinkedList<>();
+
                     monitor.unlock();
                     //  handling outside the lock to avoid deadlocks: handler work is unknown
-                    handleMessages(subscriber, handler);
+                    handleMessages(messages, handler);
                 }
 
                 monitor.lock();
@@ -73,7 +77,6 @@ public class EventBus {
                 // if a shutdown is occurring guarantee that no more messages are left to publish before exit
                 if (isShuttingDown && subscriber.messages.isEmpty()) {
                     attemptShutdown(subscriber, consumerType);
-                    monitor.unlock();
                     return;
                 }
             }
@@ -87,9 +90,9 @@ public class EventBus {
 
     /**
      * @param subscriberType the key to use on the hasmap
-     * @param subscriber the value to add to the key's corresponding list
+     * @param subscriber     the value to add to the key's corresponding list
      */
-    private void addNewSubscriberToSubscribersMap(Class subscriberType, Subscriber subscriber){
+    private void addNewSubscriberToSubscribersMap(Class subscriberType, Subscriber subscriber) {
         if (subscribers.get(subscriberType) == null) {
             LinkedList<Subscriber> subscribersByType = new LinkedList<>();
             subscribers.put(subscriberType, subscribersByType);
@@ -97,28 +100,24 @@ public class EventBus {
         subscribers.get(subscriberType).add(subscriber);
     }
 
-    private <T> void handleMessages (Subscriber subscriber, Consumer<T> handler) throws InterruptedException {
-        //  grab all messages and empty existing list, avoids further publishing to this list
-        LinkedList<Object> messages = subscriber.messages;
-        subscriber.messages = new LinkedList<>();
-
-        while (messages.size() > 0) {
-            T message = (T) messages.removeFirst();
-            try {
+    private <T> void handleMessages(LinkedList<Object> messages, Consumer<T> handler) throws InterruptedException {
+        try {
+            while (messages.size() > 0) {
+                T message = (T) messages.removeFirst();
                 handler.accept(message);
-            } catch (Exception e) {
-                String errorMessage = String.format("Handler error : %s", e.getMessage());
-                throw new InterruptedException(errorMessage);
             }
+        } catch (Exception e) {
+            String errorMessage = String.format("Handler error : %s", e.getMessage());
+            throw new InterruptedException(errorMessage);
         }
     }
 
-    private void attemptShutdown(Subscriber subscriber, Class consumerType){
+    private void attemptShutdown(Subscriber subscriber, Class consumerType) {
         numberOfSubscribers--;
         subscribers.get(consumerType).remove(subscriber);
 
         //if this is the last subscriber to exit then notify the shutdown agent
-        if(numberOfSubscribers == 0)
+        if (numberOfSubscribers == 0)
             shutdown.signal();
     }
 
@@ -127,7 +126,7 @@ public class EventBus {
 
         if (isShuttingDown) {
             monitor.unlock();
-            throw new InvalidStateException("The subscribers are shutting down and are unavailable for further publishing.");
+            throw new IllegalStateException("The subscribers are shutting down and are unavailable for further publishing.");
         }
 
         LinkedList<Subscriber> eventSubscribers = subscribers.get(message.getClass());
@@ -136,6 +135,7 @@ public class EventBus {
             eventSubscribers.forEach((subscriber) -> {
                 if (!subscriber.isFull()) {
                     subscriber.addMessage(message);
+                    //notify only if the subscriber is waiting
                     if (!subscriber.isHandlingMessages)
                         subscriber.condition.signal();
                 }
@@ -158,7 +158,7 @@ public class EventBus {
         try {
             while (true) {
                 //check first to avoid infinite loop in case shutdown is called with no subscribers
-                if(numberOfSubscribers == 0){
+                if (numberOfSubscribers == 0) {
                     monitor.unlock();
                     return;
                 }
@@ -169,15 +169,15 @@ public class EventBus {
         } catch (InterruptedException e) {
             isShuttingDown = false;
             throw e;
-        }finally {
+        } finally {
             monitor.unlock();
         }
     }
 
     /**
      * This class has two purposes:
-     *  save messages published by the publishEvent method
-     *  save the condition for each subscriber, allowing for specific notification
+     * save messages published by the publishEvent method
+     * save the condition for each subscriber, allowing for specific notification
      */
     private class Subscriber {
         private final Condition condition;
