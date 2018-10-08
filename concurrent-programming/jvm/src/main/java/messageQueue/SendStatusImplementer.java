@@ -11,22 +11,24 @@ public class SendStatusImplementer<T> implements SendStatus {
 
     private T message;
     private ReentrantLock monitor;
-    private Condition condition;
+    private Condition receiveCondition;
+    private Condition awaitCondition;
     private boolean isSent;
     private boolean messageCanceled;
     private Function<SendStatusImplementer, Boolean> messageCanceler;
 
-    public SendStatusImplementer(ReentrantLock monitor, T message, Function<SendStatusImplementer, Boolean> messageCanceler) {
+    SendStatusImplementer(ReentrantLock monitor, T message, Function<SendStatusImplementer, Boolean> messageCanceler) {
         this.message = message;
         this.monitor = monitor;
-        this.condition = monitor.newCondition();
+        this.receiveCondition = monitor.newCondition();
         this.messageCanceler = messageCanceler;
         messageCanceled = false;
+        awaitCondition = monitor.newCondition();
     }
 
-    public SendStatusImplementer(ReentrantLock monitor, Function<SendStatusImplementer, Boolean> messageCanceler) {
+    SendStatusImplementer(ReentrantLock monitor, Function<SendStatusImplementer, Boolean> messageCanceler) {
         this.monitor = monitor;
-        this.condition = monitor.newCondition();
+        this.receiveCondition = monitor.newCondition();
         this.messageCanceler = messageCanceler;
     }
 
@@ -43,10 +45,12 @@ public class SendStatusImplementer<T> implements SendStatus {
         monitor.lock();
         messageCanceled = true;
         monitor.unlock();
+
+        //this method has a lock inside, needs to be called outside the lock here
+        //otherwise problems of same lock being called would happen
         return messageCanceler.apply(this);
     }
 
-    //TODO AWAIT HAS THE SAME CONDITION AS RECEIVE , PROBLEM??
     @Override
     public boolean await(int timeout) throws InterruptedException {
 
@@ -70,7 +74,7 @@ public class SendStatusImplementer<T> implements SendStatus {
         try {
             while (true) {
 
-                condition.await(timeLeft, TimeUnit.MILLISECONDS);
+                awaitCondition.await(timeLeft, TimeUnit.MILLISECONDS);
 
                 if (messageCanceled)
                     return false;//todo : or throw exception?
@@ -84,7 +88,7 @@ public class SendStatusImplementer<T> implements SendStatus {
                 timeLeft = timer.getTimeLeftToWait();
             }
         } catch (InterruptedException e) {
-            if (messageCanceled) {
+            if (messageCanceled) {//not right, if message was canceled then might
                 Thread.currentThread().interrupt();
                 return false;//todo : or throw exception?
             }
@@ -98,29 +102,28 @@ public class SendStatusImplementer<T> implements SendStatus {
         }
     }
 
-    public void signalAwait() {
-        monitor.lock();
-        condition.signal();
-        monitor.unlock();
-    }
-
-    public void setSentToTrue() {
-        this.isSent = true;
-    }
-
-    public T getMessage() {
+    T getMessage() {
         return message;
     }
 
-    public Condition getCondition() {
-        return condition;
+    Condition getReceiveCondition() {
+        return receiveCondition;
     }
 
-    public void setMessage(T message) {
+    Condition getAwaitCondition() {
+        return awaitCondition;
+    }
+
+    void setMessage(T message) {
         this.message = message;
     }
 
-    public boolean isMessageCanceled() {
+    void setSentToTrue() {
+        this.isSent = true;
+    }
+
+    boolean isMessageCanceled() {
         return messageCanceled;
     }
+
 }

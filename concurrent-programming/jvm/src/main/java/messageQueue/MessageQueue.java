@@ -27,9 +27,9 @@ public class MessageQueue<T> {
             waiter = waiters.getFirst();
             waiter.setMessage(sentMsg);
             waiter.setSentToTrue();
-            waiter.getCondition().signal();
+            waiter.getReceiveCondition().signal();
         } else {
-            waiter = new SendStatusImplementer<>(monitor, sentMsg, this::deleteMessage);
+            waiter = new SendStatusImplementer<>(monitor, sentMsg, this::cancelMessage);
             waiters.addLast(waiter);
         }
 
@@ -53,11 +53,10 @@ public class MessageQueue<T> {
             if (sendStatusImplementer.isMessageCanceled())
                 return Optional.empty(); //todo: or throw e??
 
-
             sendStatusImplementer.setSentToTrue();
 
             //notification might be lost if no one is waiting
-            sendStatusImplementer.signalAwait();
+            sendStatusImplementer.getAwaitCondition().signal();
             monitor.unlock();
             return Optional.of(sendStatusImplementer.getMessage());
         }
@@ -69,17 +68,16 @@ public class MessageQueue<T> {
 
         long timeLeft = timer.getTimeLeftToWait();
 
-        SendStatusImplementer<T> waiter = new SendStatusImplementer<>(monitor, this::deleteMessage);
+        SendStatusImplementer<T> waiter = new SendStatusImplementer<>(monitor, this::cancelMessage);
         waiters.addLast(waiter);
 
         try {
             while (true) {
-                waiter.getCondition().await(timeLeft, TimeUnit.MILLISECONDS);
+                waiter.getReceiveCondition().await(timeLeft, TimeUnit.MILLISECONDS);
 
                 if (waiter.isMessageCanceled()){
                     System.out.println("canceled");
                     return Optional.empty(); //todo: or throw e??
-
                 }
 
                 T waiterMessage = waiter.getMessage();
@@ -104,7 +102,7 @@ public class MessageQueue<T> {
         }
     }
 
-    private boolean deleteMessage(SendStatusImplementer waiter) {
+    private boolean cancelMessage(SendStatusImplementer waiter) {
         monitor.lock();
 
         boolean success = false;
@@ -117,4 +115,5 @@ public class MessageQueue<T> {
 
         return success;
     }
+
 }
