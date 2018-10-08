@@ -1,15 +1,16 @@
+package keyedExchanger;
+
 import Utils.Timer;
 
 import java.util.HashMap;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class KeyedExchanger<T> {
 
     private final ReentrantLock monitor;
-    private HashMap<Integer, Exchanger> exchangers;
+    private HashMap<Integer, Exchanger<T>> exchangers;
 
     public KeyedExchanger() {
         monitor = new ReentrantLock();
@@ -32,18 +33,18 @@ public class KeyedExchanger<T> {
      *                              <p>
      *                              if the corresponding pair exists
      *                              give the corresponding object the data
-     *                              remove it from the hashmap
+     *                              remove it from the hash map
      *                              notify it so it can return the new data.
      *                              return the data exchanged with the other object of the pair
      *                              else
-     *                              create exchanger object and add to hashmap
+     *                              create exchanger object and add to hash map
      *                              wait for another exchanger to arrive
      *                              <p>
      *                              on wait exit
      *                              if exit was from notify
      *                              return the new data
      *                              if time has expired
-     *                              remove from hasmap
+     *                              remove from hash map
      *                              return
      *                              else
      *                              keep waiting
@@ -58,7 +59,7 @@ public class KeyedExchanger<T> {
         try {
             monitor.lock();
 
-            Exchanger other = exchangers.get(key);
+            Exchanger<T> other = exchangers.get(key);
 
             if (other != null) {
                 exchangers.remove(key);
@@ -72,7 +73,7 @@ public class KeyedExchanger<T> {
                 return Optional.empty();
             }
 
-            Exchanger me = new Exchanger(myData, monitor.newCondition());
+            Exchanger<T> me = new Exchanger<>(myData, monitor.newCondition());
             exchangers.put(key, me);
 
             long timeToWait = timer.getTimeLeftToWait();
@@ -107,16 +108,6 @@ public class KeyedExchanger<T> {
             monitor.unlock();
         }
 
-    }
-
-    private class Exchanger {
-        T data;
-        Condition condition;
-
-        Exchanger(T data, Condition condition) {
-            this.data = data;
-            this.condition = condition;
-        }
     }
 
 }

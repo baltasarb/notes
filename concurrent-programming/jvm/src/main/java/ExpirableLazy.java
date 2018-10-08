@@ -10,7 +10,7 @@ public class ExpirableLazy<T> {
     private T value;
     private boolean valueIsBeingCalculated;
 
-    public ExpirableLazy(Supplier<T> provider, long timeToLive) {
+    ExpirableLazy(Supplier<T> provider, long timeToLive) {
         this.provider = provider;
         this.timeToLive = timeToLive;
         this.monitor = new ReentrantLock();
@@ -18,7 +18,7 @@ public class ExpirableLazy<T> {
         valueIsBeingCalculated = false;
     }
 
-    public T getValue() throws Exception {
+    T getValue() throws Exception {
         synchronized (monitor) {
             if (value != null && !timeExpired())
                 return value;
@@ -60,64 +60,6 @@ public class ExpirableLazy<T> {
 
             monitor.notifyAll();
             return value;
-        }
-    }
-
-    public T getValue1() {
-        if (value != null && !timeExpired())
-            return value;
-
-        synchronized (monitor) {
-            if (value == null || timeExpired()) {
-                value = provider.get();
-                calculateAndSetExpirationTime();
-            }
-            return value;
-        }
-    }
-
-    public T getValue2() throws InterruptedException {
-        if (value != null && !timeExpired())
-            return value;
-
-        try {
-            while (true) {
-                monitor.lock();
-
-                //se nao ha valor, tempo expirou e ninguem a calcular, calcula
-                if ((value == null || timeExpired()) && !valueIsBeingCalculated) { // se valor for null ??, outra condicao em vez de == null
-                    valueIsBeingCalculated = true;
-                    monitor.unlock();
-
-                    value = provider.get();
-
-                    monitor.lock();
-
-                    //
-                    calculateAndSetExpirationTime();
-                    valueIsBeingCalculated = false;
-
-                    monitor.notify();
-
-                    monitor.unlock();
-                    return value;
-                }
-
-                if (value != null && !timeExpired()) {
-                    monitor.unlock();
-                    return value;
-                }
-
-                if (valueIsBeingCalculated)
-                    monitor.wait();
-
-                monitor.unlock();
-            }
-
-        } catch (InterruptedException e) {
-            throw e;
-        } finally {
-            monitor.unlock();
         }
     }
 

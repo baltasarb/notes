@@ -1,3 +1,5 @@
+package eventBus;
+
 import sun.plugin.dom.exception.InvalidStateException;
 
 import java.util.HashMap;
@@ -25,7 +27,7 @@ public class EventBus {
         numberOfSubscribers = 0;
     }
 
-    public <T> void SubscribeEvent(Consumer<T> handler, Class consumerType) throws InterruptedException {
+    public <T> void subscribeEvent(Consumer<T> handler, Class consumerType) throws InterruptedException {
         monitor.lock();
 
         // TODO: should this be done ?? prevents new subscribers to be added on a system shutdown
@@ -47,19 +49,19 @@ public class EventBus {
 
                 //  if publishing has occurred while handling last batch then it should be handled before waiting again
                 //  it also helps with message dumping on shutdown
-                if (subscriber.messages.isEmpty())
+                if (subscriber.getMessages().isEmpty())
                     //  wait for events to be published
-                    subscriber.condition.await();
+                    subscriber.getCondition().await();
 
                 //  on notification, check if there are messages to process and handle them if there are
-                if (!subscriber.messages.isEmpty()) {
+                if (!subscriber.getMessages().isEmpty()) {
 
                     //  sets flag to true so that the publisher knows if notification is needed to awake the subscriber
-                    subscriber.isHandlingMessages = true;
+                    subscriber.setHandlingMessages(true);
 
                     //  grab all messages and empty existing list, avoids further publishing to this list
-                    LinkedList<Object> messages = subscriber.messages;
-                    subscriber.messages = new LinkedList<>();
+                    LinkedList<Object> messages = subscriber.getMessages();
+                    subscriber.clearMessages();
 
                     monitor.unlock();
                     //  handling outside the lock to avoid deadlocks: handler work is unknown
@@ -72,10 +74,10 @@ public class EventBus {
                 // one exception: if the there is publication while the subscriber is handling messages this will be false and set
                 // to true on the next iteration of the loop directly, redundant but necessary.
                 // this redundancy avoids a simple if to check list size > 0 here
-                subscriber.isHandlingMessages = false;
+                subscriber.setHandlingMessages(false);
 
                 // if a shutdown is occurring guarantee that no more messages are left to publish before exit
-                if (isShuttingDown && subscriber.messages.isEmpty()) {
+                if (isShuttingDown && subscriber.getMessages().isEmpty()) {
                     attemptShutdown(subscriber, consumerType);
                     return;
                 }
@@ -89,7 +91,7 @@ public class EventBus {
     }
 
     /**
-     * @param subscriberType the key to use on the hasmap
+     * @param subscriberType the key to use on the hash map
      * @param subscriber     the value to add to the key's corresponding list
      */
     private void addNewSubscriberToSubscribersMap(Class subscriberType, Subscriber subscriber) {
@@ -100,6 +102,7 @@ public class EventBus {
         subscribers.get(subscriberType).add(subscriber);
     }
 
+    @SuppressWarnings("unchecked")
     private <T> void handleMessages(LinkedList<Object> messages, Consumer<T> handler) throws InterruptedException {
         try {
             while (messages.size() > 0) {
@@ -121,7 +124,7 @@ public class EventBus {
             shutdown.signal();
     }
 
-    public <E> void PublishEvent(E message) {
+    public <E> void publishEvent(E message) {
         monitor.lock();
 
         if (isShuttingDown) {
@@ -133,11 +136,11 @@ public class EventBus {
 
         if (eventSubscribers != null) {
             eventSubscribers.forEach((subscriber) -> {
-                if (!subscriber.isFull()) {
+                if (!subscriber.isFull(MAX_PENDING)) {
                     subscriber.addMessage(message);
                     //notify only if the subscriber is waiting
-                    if (!subscriber.isHandlingMessages)
-                        subscriber.condition.signal();
+                    if (!subscriber.isHandlingMessages())
+                        subscriber.getCondition().signal();
                 }
             });
         }
@@ -145,7 +148,7 @@ public class EventBus {
         monitor.unlock();
     }
 
-    public void Shutdown() throws InterruptedException {
+    public void shutdown() throws InterruptedException {
         monitor.lock();
 
         // set the flag to stop new subscribers and publishers to register handlers or publish new messages
@@ -174,28 +177,5 @@ public class EventBus {
         }
     }
 
-    /**
-     * This class has two purposes:
-     * save messages published by the publishEvent method
-     * save the condition for each subscriber, allowing for specific notification
-     */
-    private class Subscriber {
-        private final Condition condition;
-        private LinkedList<Object> messages;
-        private boolean isHandlingMessages;
 
-        Subscriber(Condition condition) {
-            this.condition = condition;
-            messages = new LinkedList<>();
-            isHandlingMessages = false;
-        }
-
-        void addMessage(Object message) {
-            messages.addLast(message);
-        }
-
-        boolean isFull() {
-            return messages.size() >= MAX_PENDING;
-        }
-    }
 }
