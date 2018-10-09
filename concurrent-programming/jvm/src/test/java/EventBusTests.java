@@ -1,3 +1,4 @@
+import eventBus.EventBus;
 import org.junit.Test;
 
 import java.util.function.Consumer;
@@ -13,13 +14,13 @@ public class EventBusTests {
 
         Thread stringEventSubscriber = new Thread(() -> {
             try {
-                eventBus.SubscribeEvent(stringConsumer, String.class);
+                eventBus.subscribeEvent(stringConsumer, String.class);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         });
 
-        Thread stringPublisher = new Thread (() -> eventBus.PublishEvent("string to publish : " + strCounter[0]++));
+        Thread stringPublisher = new Thread (() -> eventBus.publishEvent("string to publish : " + strCounter[0]++));
 
         stringEventSubscriber.start();
         Thread.sleep(1000);
@@ -37,13 +38,13 @@ public class EventBusTests {
 
         Thread stringEventSubscriber = new Thread(() -> {
             try {
-                eventBus.SubscribeEvent(stringConsumer, String.class);
+                eventBus.subscribeEvent(stringConsumer, String.class);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         });
 
-        Thread stringPublisher = new Thread (() -> eventBus.PublishEvent("string to publish : " + strCounter[0]++));
+        Thread stringPublisher = new Thread (() -> eventBus.publishEvent("string to publish : " + strCounter[0]++));
 
         stringPublisher.start();
         Thread.sleep(1000);
@@ -61,13 +62,13 @@ public class EventBusTests {
 
         Thread stringEventSubscriber = new Thread(() -> {
             try {
-                eventBus.SubscribeEvent(stringConsumer, String.class);
+                eventBus.subscribeEvent(stringConsumer, String.class);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         });
 
-        Thread intPublisher = new Thread (() -> eventBus.PublishEvent(1));
+        Thread intPublisher = new Thread (() -> eventBus.publishEvent(1));
 
         stringEventSubscriber.start();
         Thread.sleep(1000);
@@ -86,7 +87,7 @@ public class EventBusTests {
 
         Thread stringEventSubscriber = new Thread(() -> {
             try {
-                eventBus.SubscribeEvent(stringConsumer, String.class);
+                eventBus.subscribeEvent(stringConsumer, String.class);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -94,14 +95,14 @@ public class EventBusTests {
 
         Thread intEventSubscriber = new Thread(() -> {
             try {
-                eventBus.SubscribeEvent(intConsumer, Integer.class);
+                eventBus.subscribeEvent(intConsumer, Integer.class);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         });
 
-        Thread intPublisher = new Thread (() -> eventBus.PublishEvent(1));
-        Thread stringPublisher = new Thread (() -> eventBus.PublishEvent("string to publish : " + strCounter[0]++));
+        Thread intPublisher = new Thread (() -> eventBus.publishEvent(1));
+        Thread stringPublisher = new Thread (() -> eventBus.publishEvent("string to publish : " + strCounter[0]++));
 
         stringEventSubscriber.start();
         intEventSubscriber.start();

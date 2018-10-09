@@ -1,41 +1,95 @@
+import junit.framework.AssertionFailedError;
+import keyedExchanger.KeyedExchanger;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.Optional;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 public class KeyedExchangerTests {
 
     @Test
-    public void t() throws InterruptedException {
+    public void exchangeBetweenTwoThreadsTest() throws InterruptedException {
         KeyedExchanger<String> keyedExchanger = new KeyedExchanger<>();
         int pairKey = 1;
-        String thread1Message = "Mensagem da thread 1.";
-        String thread2Message = "Mensagem da thread 2.";
-        ArrayList<Optional<String>> threadData = new ArrayList<>();
+        String message1 = "message from exchanger 1";
+        String message2 = "message from exchanger 2";
 
-        BiConsumer<Integer, String> task = (key, message) -> {
+        Thread exchanger1 = new Thread(() -> {
             try {
-                Optional<String> result = keyedExchanger.exchange(key,message, 10000);
-                threadData.add(result);
+                Optional<String> result = keyedExchanger.exchange(pairKey, message1, 1000);
+                assert result.equals(Optional.of(message2));
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+        });
 
-        };
-        Thread t1 = new Thread(() -> task.accept(pairKey, thread1Message));
-        Thread t2 = new Thread(() -> task.accept(pairKey, thread2Message));
+        Thread exchanger2 = new Thread(() -> {
+            try {
+                Optional<String> result = keyedExchanger.exchange(pairKey, message2, 1000);
+                assert result.equals(Optional.of(message1));
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
 
-        t1.start();
-        Thread.sleep(2500);//guaratees that first executes first
-        t2.start();
+        exchanger1.start();
+        exchanger2.start();
 
-        Thread.sleep(1000);
+        Thread.sleep(500);
+    }
 
-        assert !threadData.get(0).isPresent() || threadData.get(0).get().equals(thread1Message);
-        assert !threadData.get(1).isPresent() || threadData.get(1).get().equals(thread2Message);
+    @Test
+    public void timeoutInExchangeBetweenTwoThreadsTest() throws InterruptedException {
+        KeyedExchanger<String> keyedExchanger = new KeyedExchanger<>();
+        int pairKey = 1;
+        String message1 = "message from exchanger 1";
+        String message2 = "message from exchanger 2";
 
+        Thread exchanger1 = new Thread(() -> {
+            try {
+                Optional<String> result = keyedExchanger.exchange(pairKey, message1, 1);
+                assert result.equals(Optional.empty());
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+
+        Thread exchanger2 = new Thread(() -> {
+            try {
+                Optional<String> result = keyedExchanger.exchange(pairKey, message2, 1);
+                assert result.equals(Optional.empty());
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+
+        exchanger1.start();
+        Thread.sleep(100);
+        exchanger2.start();
+
+        Thread.sleep(500);
+    }
+
+    @Test()
+    public void illegalArgumentsTest() throws InterruptedException {
+        KeyedExchanger<String> keyedExchanger = new KeyedExchanger<>();
+        int pairKey = 1;
+
+        Thread exchanger1 = new Thread(() -> {
+            try {
+                Optional<String> result = keyedExchanger.exchange(pairKey, null, -1);
+                assert result.equals(Optional.empty());
+            } catch (Exception e) {
+                assert e instanceof IllegalArgumentException;
+            }
+        });
+
+        exchanger1.start();
+        Thread.sleep(100);
+    }
+
+    @Test
+    public void stressTest() {
 
     }
+
 }

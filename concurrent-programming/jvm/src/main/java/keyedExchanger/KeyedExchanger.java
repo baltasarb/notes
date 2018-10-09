@@ -52,45 +52,38 @@ public class KeyedExchanger<T> {
     public Optional<T> exchange(int key, T myData, int timeout) throws InterruptedException {
         Timer timer = new Timer(timeout);
 
-        if (timeout <= 0) {
+        if (myData == null || timeout <= 0) {
+            String errorMessage = generateInvalidArgumentError(myData, timeout);
+            throw new IllegalArgumentException(errorMessage);
+        }
+
+        monitor.lock();
+
+        Exchanger<T> other = exchangers.get(key);
+
+        if (other != null) {
+            exchangers.remove(key);
+            Optional<T> data = Optional.of(other.data); //after being signaled data may no longer be available
+            other.data = myData;
+            other.condition.signal();
+            monitor.unlock();
+            return data;
+        }
+
+        if (timer.timeExpired()) {
+            monitor.unlock();
             return Optional.empty();
         }
 
+        Exchanger<T> me = new Exchanger<>(myData, monitor.newCondition());
+        exchangers.put(key, me);
+
+        long timeToWait = timer.getTimeLeftToWait();
+
         try {
-            monitor.lock();
-
-            Exchanger<T> other = exchangers.get(key);
-
-            if (other != null) {
-                exchangers.remove(key);
-                Optional<T> data = Optional.of(other.data); //after being signaled data may no longer be available
-                other.data = myData;
-                other.condition.signal();
-                return data;
-            }
-
-            if (timer.timeExpired()) {
-                return Optional.empty();
-            }
-
-            Exchanger<T> me = new Exchanger<>(myData, monitor.newCondition());
-            exchangers.put(key, me);
-
-            long timeToWait = timer.getTimeLeftToWait();
-
             while (true) {
-                try {
-                    me.condition.await(timeToWait, TimeUnit.MILLISECONDS);
-                } catch (InterruptedException e) {
-                    if (!me.data.equals(myData)) {
-                        Thread.currentThread().interrupt();
-                        return Optional.of(me.data);
-                    }
-                    if (exchangers.get(key) != null)
-                        exchangers.remove(key);
 
-                    throw e;
-                }
+                me.condition.await(timeToWait, TimeUnit.MILLISECONDS);
 
                 if (!me.data.equals(myData)) {
                     return Optional.of(me.data);
@@ -102,12 +95,31 @@ public class KeyedExchanger<T> {
                     exchangers.remove(key);
                     return Optional.empty();
                 }
-
             }
+        } catch (InterruptedException e) {
+            if (!me.data.equals(myData)) {
+                Thread.currentThread().interrupt();
+                return Optional.of(me.data);
+            }
+            if (exchangers.get(key) != null){
+                exchangers.remove(key);
+            }
+
+            throw e;
         } finally {
             monitor.unlock();
         }
+    }
 
+    private String generateInvalidArgumentError(T data, int timeout) {
+        StringBuilder stringBuilder = new StringBuilder();
+
+        if (data == null)
+            stringBuilder.append("Data cannot be null. ");
+        if (timeout >= 0)
+            stringBuilder.append("Timeout must be > 0.");
+
+        return String.format("Invalid argument : %s", stringBuilder.toString());
     }
 
 }
