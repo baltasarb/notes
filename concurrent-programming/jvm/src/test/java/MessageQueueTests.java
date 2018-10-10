@@ -5,6 +5,7 @@ import org.junit.Test;
 import java.rmi.UnexpectedException;
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.Random;
 
 public class MessageQueueTests {
 
@@ -235,12 +236,13 @@ public class MessageQueueTests {
         Thread.sleep(500);
     }
 
+    //TODO : FAILING SOMETIMES
     @Test
     public void stressTest() throws InterruptedException {
         MessageQueue<Integer> messageQueue = new MessageQueue<>();
         int[] messageId = {0};
 
-        int numberOfMessages = 100;
+        int numberOfMessages = 500;
         ArrayList<Optional<Integer>> results = new ArrayList<>();
 
         Runnable sendTask = () -> messageQueue.send(messageId[0]++);
@@ -254,20 +256,31 @@ public class MessageQueueTests {
             }
         };
 
-        Thread [] senders = new Thread[numberOfMessages];
-        Thread [] receivers = new Thread[numberOfMessages];
+        Thread[] senders = new Thread[numberOfMessages];
+        Thread[] receivers = new Thread[numberOfMessages];
 
-        for(int i = 0; i < numberOfMessages; i++){
-            senders[i] = new Thread(sendTask);
-            senders[i].start();
-            receivers[i] = new Thread(receiveTask);
-            receivers[i].start();
+        for (int i = 0; i < numberOfMessages; i++) {
+            int randomNumber = new Random().nextInt();
+
+            if(randomNumber % 2 == 0){
+                senders[i] = new Thread(sendTask);
+                senders[i].start();
+                receivers[i] = new Thread(receiveTask);
+                receivers[i].start();
+            }
+
+            else{
+                receivers[i] = new Thread(receiveTask);
+                receivers[i].start();
+                senders[i] = new Thread(sendTask);
+                senders[i].start();
+            }
         }
 
         Thread.sleep(500);
 
         ArrayList<Optional<Integer>> expectedResults = new ArrayList<>();
-        for(int i = 0; i < numberOfMessages; i++)
+        for (int i = 0; i < numberOfMessages; i++)
             expectedResults.add(Optional.of(i));
 
         results.forEach(result -> {
