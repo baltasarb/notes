@@ -1,8 +1,8 @@
-import junit.framework.AssertionFailedError;
 import keyedExchanger.KeyedExchanger;
 import org.junit.Test;
 
 import java.util.Optional;
+import java.util.function.BiFunction;
 
 public class KeyedExchangerTests {
 
@@ -15,7 +15,7 @@ public class KeyedExchangerTests {
 
         Thread exchanger1 = new Thread(() -> {
             try {
-                Optional<String> result = keyedExchanger.exchange(pairKey, message1, 1000);
+                Optional<String> result = keyedExchanger.exchange(pairKey, message1, 10000);
                 assert result.equals(Optional.of(message2));
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -24,7 +24,7 @@ public class KeyedExchangerTests {
 
         Thread exchanger2 = new Thread(() -> {
             try {
-                Optional<String> result = keyedExchanger.exchange(pairKey, message2, 1000);
+                Optional<String> result = keyedExchanger.exchange(pairKey, message2, 10000);
                 assert result.equals(Optional.of(message1));
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -88,8 +88,30 @@ public class KeyedExchangerTests {
     }
 
     @Test
-    public void stressTest() {
+    public void stressTest() throws InterruptedException {
+        KeyedExchanger<Integer> keyedExchanger = new KeyedExchanger<>();
 
+        BiFunction<Integer, Integer, Runnable> taskGenerator = (pairKey, messageId) -> () -> {
+            try {
+                Optional<Integer> result = keyedExchanger.exchange(pairKey, messageId, 10000);
+                assert result.equals(Optional.of(messageId+1));
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        };
+
+        int numberOfThreads = 100;
+        int messageId = 0;
+        Thread[] exchangers = new Thread[numberOfThreads];
+        for (int i = 0; i < exchangers.length-1; i+=2) {
+            exchangers[i] = new Thread(taskGenerator.apply(i, messageId));
+            exchangers[i + 1] = new Thread(taskGenerator.apply(i, messageId++));
+        }
+
+        for(int i = 0; i < exchangers.length; i++)
+            exchangers[i].start();
+
+        Thread.sleep(1000);
     }
 
 }
