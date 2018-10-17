@@ -21,7 +21,6 @@ public class MessageQueue<T> {
 
     public SendStatus send(T sentMsg) {
         monitor.lock();
-
         if (!consumerStatuses.isEmpty()) {
             ConsumerStatus<T> consumerStatus = consumerStatuses.removeFirst();
             consumerStatus.sendMessageAndsignal(sentMsg);
@@ -40,11 +39,11 @@ public class MessageQueue<T> {
 
     public Optional<T> receive(int timeout) throws InterruptedException {
         monitor.lock();
-
         if (!producerStatuses.isEmpty()) {
             ProducerStatus<T> producerStatus = producerStatuses.removeFirst();
             Optional<T> message = Optional.of(producerStatus.getMessage());
             producerStatus.setMessageSent();
+            monitor.unlock();
             return message;
         }
 
@@ -52,6 +51,7 @@ public class MessageQueue<T> {
         long timeLeftToWait = timer.getTimeLeftToWait();
 
         if (timer.timeExpired()) {
+            monitor.unlock();
             return Optional.empty();
         }
 

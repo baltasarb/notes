@@ -66,14 +66,7 @@ public class MessageQueueTests {
     }
 
     @Test
-    public void runAllNTimes() throws InterruptedException {
-        for (int i = 0; i < 5000; i++) {
-            sendBeforeReceiveTest();
-        }
-    }
-
-    @Test
-    public void ReceiveBeforeSendTest() throws InterruptedException {
+    public void receiveBeforeSendTest() throws InterruptedException {
         int numberOfWorkers = 2;
 
         //pool to synchronize results with the main thread
@@ -112,244 +105,392 @@ public class MessageQueueTests {
         executor.shutdown();
 
         Optional<String> expectedResult = Optional.empty();
-        System.out.println(results);
         Assert.assertTrue(results.contains(expectedResult));
         Assert.assertTrue(failedResults.isEmpty());
     }
 
     @Test
     public void isSentTest() throws InterruptedException {
+        int numberOfWorkers = 2;
+
+        //pool to synchronize results with the main thread
+        ExecutorService executor = Executors.newFixedThreadPool(numberOfWorkers);
+        CompletionService<Void> completion = new ExecutorCompletionService<>(executor);
+
         MessageQueue<String> messageQueue = new MessageQueue<>();
-        String messageToSend = "message to send";
-        Optional<String> expectedResult = Optional.of(messageToSend);
+
+        ArrayList<SendStatus> results = new ArrayList<>();
+        ArrayList<String> failedResults = new ArrayList<>();
+
+        Object resultSynchronization = new Object();
 
         Runnable sendTask = () -> {
-            SendStatus status = messageQueue.send(messageToSend);
-            assert !status.isSent();
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                System.out.println("Sender : unexpected interrupted exception on thread sleep.");
+            SendStatus sendStatus = messageQueue.send("someMessage");
+            synchronized (resultSynchronization) {
+                results.add(sendStatus);
             }
-            assert status.isSent();
         };
 
         Runnable receiveTask = () -> {
             try {
-                Optional<String> result = messageQueue.receive(1000);
-                assert result.equals(expectedResult);
+                messageQueue.receive(1000);
             } catch (InterruptedException e) {
-                System.out.println("Receiver : unexpected interrupted exception on thread sleep.");
+                synchronized (resultSynchronization) {
+                    failedResults.add("Failure occurred receive.");
+                }
             }
         };
 
-        Thread sender = new Thread(sendTask);
-        Thread receiver = new Thread(receiveTask);
+        //submit the work to the pool
+        completion.submit(() -> {
+            sendTask.run();
+            return null;
+        });
 
-        sender.start();
-        Thread.sleep(200);
-        receiver.start();
+        completion.submit(() -> {
+            receiveTask.run();
+            return null;
+        });
 
-        Thread.sleep(500);
+        // wait for all tasks to complete.
+        for (int i = 0; i < numberOfWorkers; ++i) {
+            completion.take(); // will block until the next sub task has completed.
+        }
+        executor.shutdown();
+
+        Assert.assertTrue(results.get(0).isSent());
+        Assert.assertTrue(failedResults.isEmpty());
     }
 
     @Test
     public void isNotSentTest() throws InterruptedException {
+        int numberOfWorkers = 1;
+
+        //pool to synchronize results with the main thread
+        ExecutorService executor = Executors.newFixedThreadPool(numberOfWorkers);
+        CompletionService<Void> completion = new ExecutorCompletionService<>(executor);
+
         MessageQueue<String> messageQueue = new MessageQueue<>();
-        String messageToSend = "message to send";
+
+        ArrayList<SendStatus> results = new ArrayList<>();
+
+        Object resultSynchronization = new Object();
 
         Runnable sendTask = () -> {
-            SendStatus status = messageQueue.send(messageToSend);
-            assert !status.isSent();
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                System.out.println("Sender : unexpected interrupted exception on thread sleep.");
+            SendStatus sendStatus = messageQueue.send("someMessage");
+            synchronized (resultSynchronization) {
+                results.add(sendStatus);
             }
-            assert !status.isSent();
         };
 
-        Thread sender = new Thread(sendTask);
+        //submit the work to the pool
+        completion.submit(() -> {
+            sendTask.run();
+            return null;
+        });
 
-        sender.start();
+        // wait for all tasks to complete.
+        for (int i = 0; i < numberOfWorkers; ++i) {
+            completion.take(); // will block until the next sub task has completed.
+        }
+        executor.shutdown();
 
-        Thread.sleep(500);
+        Assert.assertFalse(results.get(0).isSent());
     }
 
     @Test
     public void awaitSuccessTest() throws InterruptedException {
+        int numberOfWorkers = 2;
+
+        //pool to synchronize results with the main thread
+        ExecutorService executor = Executors.newFixedThreadPool(numberOfWorkers);
+        CompletionService<Void> completion = new ExecutorCompletionService<>(executor);
+
         MessageQueue<String> messageQueue = new MessageQueue<>();
-        String messageToSend = "message to send";
-        Optional<String> expectedResult = Optional.of(messageToSend);
+
+        ArrayList<Boolean> results = new ArrayList<>();
+        ArrayList<String> failedResults = new ArrayList<>();
+
+        Object resultSynchronization = new Object();
 
         Runnable sendTask = () -> {
-            SendStatus status = messageQueue.send(messageToSend);
-
+            SendStatus sendStatus = messageQueue.send("someMessage");
+            boolean result = false;
             try {
-                boolean success = status.await(1000);
-                assert success;
+                //wait for the message to be sent
+                result = sendStatus.await(1000);
             } catch (InterruptedException e) {
-                System.out.println("Sender await : Unexpected Interruption Occurred. ");
+                failedResults.add("Error in await.");
+            }
+            synchronized (resultSynchronization) {
+                results.add(result);
             }
         };
 
         Runnable receiveTask = () -> {
             try {
-                Optional<String> result = messageQueue.receive(1000);
-                assert result.equals(expectedResult);
+                messageQueue.receive(1000);
             } catch (InterruptedException e) {
-                System.out.println("Receiver : unexpected interrupted exception on thread sleep.");
+                synchronized (resultSynchronization) {
+                    failedResults.add("Failure occurred receive.");
+                }
             }
         };
 
-        Thread sender = new Thread(sendTask);
-        Thread receiver = new Thread(receiveTask);
+        //submit the work to the pool
+        completion.submit(() -> {
+            sendTask.run();
+            return null;
+        });
 
-        sender.start();
-        Thread.sleep(200);
-        receiver.start();
+        completion.submit(() -> {
+            receiveTask.run();
+            return null;
+        });
 
-        Thread.sleep(500);
+        // wait for all tasks to complete.
+        for (int i = 0; i < numberOfWorkers; ++i) {
+            completion.take(); // will block until the next sub task has completed.
+        }
+        executor.shutdown();
+
+        Assert.assertTrue(results.get(0));
+        Assert.assertTrue(failedResults.isEmpty());
     }
 
     @Test
     public void awaitFailureTest() throws InterruptedException {
+        int numberOfWorkers = 1;
+
+        //pool to synchronize results with the main thread
+        ExecutorService executor = Executors.newFixedThreadPool(numberOfWorkers);
+        CompletionService<Void> completion = new ExecutorCompletionService<>(executor);
+
         MessageQueue<String> messageQueue = new MessageQueue<>();
-        String messageToSend = "message to send";
+
+        ArrayList<Boolean> results = new ArrayList<>();
+        ArrayList<String> failedResults = new ArrayList<>();
+
+        Object resultSynchronization = new Object();
 
         Runnable sendTask = () -> {
-            SendStatus status = messageQueue.send(messageToSend);
-
+            SendStatus sendStatus = messageQueue.send("someMessage");
+            boolean result = true;
             try {
-                boolean success = status.await(1000);
-                assert !success;
+                //wait for the message to be sent
+                result = sendStatus.await(0);
             } catch (InterruptedException e) {
-                System.out.println("Sender await : Unexpected Interruption Occurred. ");
+                failedResults.add("Error in await.");
+            }
+            synchronized (resultSynchronization) {
+                results.add(result);
             }
         };
 
-        Thread sender = new Thread(sendTask);
+        //submit the work to the pool
+        completion.submit(() -> {
+            sendTask.run();
+            return null;
+        });
 
-        sender.start();
+        // wait for all tasks to complete.
+        for (int i = 0; i < numberOfWorkers; ++i) {
+            completion.take(); // will block until the next sub task has completed.
+        }
+        executor.shutdown();
 
-        Thread.sleep(500);
+        Assert.assertTrue(!results.get(0));
+        Assert.assertTrue(failedResults.isEmpty());
     }
 
     @Test
     public void tryCancelSuccessTest() throws InterruptedException {
+        int numberOfWorkers = 1;
+
+        //pool to synchronize results with the main thread
+        ExecutorService executor = Executors.newFixedThreadPool(numberOfWorkers);
+        CompletionService<Void> completion = new ExecutorCompletionService<>(executor);
+
         MessageQueue<String> messageQueue = new MessageQueue<>();
-        String messageToSend = "message to send";
-        Optional<String> expectedResult = Optional.of(messageToSend);
+
+        ArrayList<Boolean> results = new ArrayList<>();
+
+        Object resultSynchronization = new Object();
 
         Runnable sendTask = () -> {
-            SendStatus status = messageQueue.send(messageToSend);
-            boolean success = status.tryCancel();
-            assert success;
+            SendStatus sendStatus = messageQueue.send("someMessage");
+            //wait for the message to be sent
+            boolean result = sendStatus.tryCancel();
+            synchronized (resultSynchronization) {
+                results.add(result);
+            }
         };
 
-        Thread sender = new Thread(sendTask);
+        //submit the work to the pool
+        completion.submit(() -> {
+            sendTask.run();
+            return null;
+        });
 
-        sender.start();
+        // wait for all tasks to complete.
+        for (int i = 0; i < numberOfWorkers; ++i) {
+            completion.take(); // will block until the next sub task has completed.
+        }
+        executor.shutdown();
 
-        Thread.sleep(500);
+        Assert.assertTrue(results.get(0));
     }
 
     @Test
     public void tryCancelFailureFirstTest() throws InterruptedException {
+        int numberOfWorkers = 2;
+
+        //pool to synchronize results with the main thread
+        ExecutorService executor = Executors.newFixedThreadPool(numberOfWorkers);
+        CompletionService<Void> completion = new ExecutorCompletionService<>(executor);
+
         MessageQueue<String> messageQueue = new MessageQueue<>();
-        String messageToSend = "message to send";
-        Optional<String> expectedResult = Optional.of(messageToSend);
+
+        ArrayList<SendStatus> results = new ArrayList<>();
+        ArrayList<String> failedResults = new ArrayList<>();
+
+        Object resultSynchronization = new Object();
 
         Runnable sendTask = () -> {
-            SendStatus status = messageQueue.send(messageToSend);
-            try {
-                Thread.sleep(500);
-                boolean success = status.tryCancel();
-                assert !success;
-            } catch (InterruptedException e) {
-                System.out.println("Sender await : Unexpected Interruption Occurred. ");
+            SendStatus sendStatus = messageQueue.send("someMessage");
+            synchronized (resultSynchronization) {
+                results.add(sendStatus);
             }
         };
 
         Runnable receiveTask = () -> {
             try {
-                Optional<String> result = messageQueue.receive(1000);
-                assert result.equals(expectedResult);
+                messageQueue.receive(1000);
             } catch (InterruptedException e) {
-                System.out.println("Receiver : unexpected interrupted exception on thread sleep.");
+                synchronized (resultSynchronization) {
+                    failedResults.add("Failure occurred receive.");
+                }
             }
         };
 
-        Thread sender = new Thread(sendTask);
-        Thread receiver = new Thread(receiveTask);
+        //submit the work to the pool
+        completion.submit(() -> {
+            sendTask.run();
+            return null;
+        });
 
-        sender.start();
-        Thread.sleep(200);
-        receiver.start();
+        completion.submit(() -> {
+            receiveTask.run();
+            return null;
+        });
 
-        Thread.sleep(500);
+        // wait for all tasks to complete.
+        for (int i = 0; i < numberOfWorkers; ++i) {
+            completion.take(); // will block until the next sub task has completed.
+        }
+        executor.shutdown();
+
+        Assert.assertTrue(!results.get(0).tryCancel());
+        Assert.assertTrue(failedResults.isEmpty());
     }
 
     @Test
     public void stressTest() throws InterruptedException {
+        int numberOfWorkers = 1000;
+
+        //pool to synchronize results with the main thread
+        ExecutorService executor = Executors.newFixedThreadPool(numberOfWorkers);
+        CompletionService<Void> completion = new ExecutorCompletionService<>(executor);
+
         MessageQueue<Integer> messageQueue = new MessageQueue<>();
-        int[] messageId = {0};
 
-        int numberOfMessages = 1000;
         ArrayList<Optional<Integer>> results = new ArrayList<>();
+        ArrayList<String> failedResults = new ArrayList<>();
 
-        Runnable sendTask = () -> messageQueue.send(messageId[0]++);
+        Object resultSynchronization = new Object();
+
+        int[] messageIds = {0};
+
+        Runnable sendTask = () -> {
+            int message;
+            synchronized (resultSynchronization) {
+                message = messageIds[0];
+                messageIds[0]++;
+            }
+            messageQueue.send(message);
+        };
 
         Runnable receiveTask = () -> {
             try {
-                Optional<Integer> result = messageQueue.receive(10000);
-                results.add(result);
+                Optional<Integer> result = messageQueue.receive(1000);
+                synchronized (resultSynchronization) {
+                    results.add(result);
+                }
             } catch (InterruptedException e) {
-                System.out.println("Receiver : unexpected interrupted exception on wait.");
+                synchronized (resultSynchronization) {
+                    failedResults.add("Failure occurred receive.");
+                }
             }
         };
 
-        Thread[] senders = new Thread[numberOfMessages];
-        Thread[] receivers = new Thread[numberOfMessages];
-
-        for (int i = 0; i < numberOfMessages; i++) {
+        //submit the work to the pool
+        //number of workers dividing by 2 because only half of them are senders
+        //the other half are receivers
+        for (int i = 0; i < numberOfWorkers / 2; i++) {
             int randomNumber = new Random().nextInt();
 
             if (randomNumber % 2 == 0) {
-                senders[i] = new Thread(sendTask);
-                senders[i].start();
-                receivers[i] = new Thread(receiveTask);
-                receivers[i].start();
+                completion.submit(() -> {
+                    sendTask.run();
+                    return null;
+                });
+
+                completion.submit(() -> {
+                    receiveTask.run();
+                    return null;
+                });
             } else {
-                receivers[i] = new Thread(receiveTask);
-                receivers[i].start();
-                senders[i] = new Thread(sendTask);
-                senders[i].start();
+                completion.submit(() -> {
+                    receiveTask.run();
+                    return null;
+                });
+
+                completion.submit(() -> {
+                    sendTask.run();
+                    return null;
+                });
             }
         }
 
-        //time given for the work to be complete
-        Thread.sleep(2500);
-
-        ArrayList<Optional<Integer>> expectedResults = new ArrayList<>();
-        for (int i = 0; i < numberOfMessages; i++)
-            expectedResults.add(Optional.of(i));
-
-        for (int i = 0; i < results.size(); i++) {
-            Optional<Integer> result = results.get(i);
-            boolean res = expectedResults.contains(result);
-            if (!res)
-                System.out.println(result + ": " + res);
-            Assert.assertTrue(res);
-            //each key can only be found once
-            expectedResults.remove(result);
+        // wait for all tasks to complete.
+        for (int i = 0; i < numberOfWorkers; ++i) {
+            completion.take(); // will block until the next sub task has completed.
         }
+        executor.shutdown();
 
+        //only half of the workers are message receivers
+        for (int i = 0; i < numberOfWorkers / 2; i++) {
+            Optional<Integer> expectedMessage = Optional.of(i);
+            if (!results.contains(expectedMessage)) {
+                System.out.println(expectedMessage);
+            }
+            Assert.assertTrue(results.contains(expectedMessage));
+            results.remove(expectedMessage);
+        }
+        Assert.assertTrue(failedResults.isEmpty());
     }
 
     @Test
-    public void stressTestNTimes() throws InterruptedException {
+    public void runAllNTimes() throws InterruptedException {
         for (int i = 0; i < 25; i++) {
+            sendBeforeReceiveTest();
+            receiveBeforeSendTest();
+            isSentTest();
+            isNotSentTest();
+            awaitSuccessTest();
+            awaitFailureTest();
+            tryCancelSuccessTest();
+            tryCancelFailureFirstTest();
             stressTest();
         }
     }

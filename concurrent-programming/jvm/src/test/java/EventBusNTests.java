@@ -132,12 +132,26 @@ public class EventBusNTests {
         });
 
         Thread intPublisher1 = new Thread(() -> {
-            eventBus.publishEvent(event[0]++);
-            eventBus.publishEvent(event[0]++);
+            int message1;
+            int message2;
+            synchronized (monitor) {
+                message1 = event[0];
+                message2 = ++event[0];
+                event[0]++;
+            }
+            eventBus.publishEvent(message1);
+            eventBus.publishEvent(message2);
         });
         Thread intPublisher2 = new Thread(() -> {
-            eventBus.publishEvent(event[0]++);
-            eventBus.publishEvent(event[0]++);
+            int message1;
+            int message2;
+            synchronized (monitor) {
+                message1 = event[0];
+                message2 = ++event[0];
+                event[0]++;
+            }
+            eventBus.publishEvent(message1);
+            eventBus.publishEvent(message2);
         });
 
         intEventSubscriber.start();
@@ -235,7 +249,12 @@ public class EventBusNTests {
         };
 
         Runnable intPublisherTask = () -> {
-            eventBus.publishEvent(intPublicationMessage[0]++);
+            int message;
+            synchronized (monitor) {
+                message = intPublicationMessage[0];
+                intPublicationMessage[0]++;
+            }
+            eventBus.publishEvent(message);
         };
 
         Thread[] subscribers = new Thread[numberOfWorkers];
@@ -274,7 +293,7 @@ public class EventBusNTests {
         EventBusN eventBus = new EventBusN(numberOfWorkers);
 
         int[] intPublicationMessage = {0};
-        int[] messageIds = {0};
+        int [] stringPublicationMessageId = {0};
 
         ArrayList<Integer> intResults = new ArrayList<>();
         ArrayList<String> stringResults = new ArrayList<>();
@@ -287,6 +306,7 @@ public class EventBusNTests {
                 intResults.add(result);
             }
         };
+
         Consumer<String> stringSubscriberConsumer = result -> {
             synchronized (monitor) {
                 stringResults.add(result);
@@ -300,6 +320,7 @@ public class EventBusNTests {
                 failedResults.add("Exception in int subscriber");
             }
         };
+
         Runnable stringSubscriberTask = () -> {
             try {
                 eventBus.subscribeEvent(stringSubscriberConsumer, String.class);
@@ -309,10 +330,21 @@ public class EventBusNTests {
         };
 
         Runnable intPublisherTask = () -> {
-            eventBus.publishEvent(intPublicationMessage[0]++);
+            int message;
+            synchronized (monitor) {
+                message = intPublicationMessage[0];
+                intPublicationMessage[0]++;
+            }
+            eventBus.publishEvent(message);
         };
+
         Runnable stringPublisherTask = () -> {
-            eventBus.publishEvent("message " + messageIds[0]++);
+            int message;
+            synchronized (monitor) {
+                message = stringPublicationMessageId[0];
+                stringPublicationMessageId[0]++;
+            }
+            eventBus.publishEvent("message " + message);
         };
 
         Thread[] subscribers = new Thread[numberOfWorkers];
