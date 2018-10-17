@@ -58,4 +58,24 @@ public class FinallyBlockTests {
         }
 
     }
+
+    @Test
+    public void outterExceptionAfterInnerFinally(){
+
+        try{
+            System.out.println("outter try");
+            try{
+                throw new IllegalStateException();
+            }finally {
+                System.out.println("inner finally");
+            }
+
+        }catch (Exception e){
+            System.out.println("exception caught");
+        }finally {
+            System.out.println("outter finally");
+        }
+
+
+    }
 }

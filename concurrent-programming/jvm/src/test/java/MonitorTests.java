@@ -6,73 +6,67 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class MonitorTests {
 
+    private class OuterMonitor {
+        private ReentrantLock outerMonitor;
+        private InnerMonitor innerMonitor;
 
-    private class Object1 {
-        boolean bool;
-        public ReentrantLock monitor;
-        Condition condition;
-
-        public Object1() {
-            this.bool = false;
-            this.monitor = new ReentrantLock();
-            this.condition = monitor.newCondition();
+        OuterMonitor(InnerMonitor innerMonitor) {
+            this.outerMonitor = new ReentrantLock();
+            this.innerMonitor = innerMonitor;
         }
 
-
-        public void waitInfinitely() throws InterruptedException {
-            monitor.lock();
-
-            //System.out.println("bool state ->" + bool);
-
-            Thread.sleep(1000);
-
-            //System.out.println("bool state ->" + bool);
-
-            condition.await(1000, TimeUnit.MILLISECONDS);
-
-            //System.out.println("bool state ->" + bool);
-
-            monitor.unlock();
-            System.out.println("bool state ->" + bool);
-
+        void enterMonitor() throws InterruptedException {
+            outerMonitor.lock();
+            System.out.println("In outter, before inner");
+            innerMonitor.enterInnerMonitor();
+            System.out.println("In outter, after inner");
+            outerMonitor.unlock();
+        }
+        void notifyOutterMonitor(){
+            outerMonitor.lock();
+            outerMonitor.notify();
+            outerMonitor.unlock();
         }
     }
 
+    private class InnerMonitor{
+        private final Object innerMonitor;
 
-    private class Object2 {
-
-        ReentrantLock monitor;
-        Object1 object1;
-
-        public Object2(Object1 object1) {
-            monitor = new ReentrantLock();
-            this.object1 = object1;
+        InnerMonitor(){
+            this.innerMonitor = new Object();
         }
 
-        public void setBool() {
-            monitor.lock();
+        void enterInnerMonitor() throws InterruptedException {
+            synchronized (innerMonitor){
 
-            object1.bool = true;
+                try{
+                    System.out.println("before waiting in inner");
+                    innerMonitor.wait();
+                    System.out.println("after waiting in inner");
+                }catch (InterruptedException e){
+                    throw e;
+                }
 
-            object1.condition.signal();
-
-            monitor.unlock();
+            }
         }
 
+        void notifyInnerMonitor() {
+            synchronized (innerMonitor){
+                innerMonitor.notify();
+            }
+        }
     }
 
     @Test
-    public void t() throws InterruptedException {
-        Object1 o = new Object1();
-        Object2 o2 = new Object2(o);
+    public void innerMonitorHoldsOuterMonitorTest() throws InterruptedException {
+        InnerMonitor innerMonitor = new InnerMonitor();
+        OuterMonitor outerMonitor = new OuterMonitor(innerMonitor);
 
-        o.waitInfinitely();
+        outerMonitor.enterMonitor();
 
-        Thread.sleep(1111);
+        Thread.sleep(100);
 
-        o2.setBool();
-
-        Thread.sleep(1111);
+        //this should not happen as outer is held by inner
+        outerMonitor.enterMonitor();
     }
-
 }
