@@ -1,22 +1,22 @@
-package eventBusV3;
+package eventBus;
 
 import java.util.LinkedList;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
-class TypeSubscribersN {
+class TypeSubscribers {
 
     private final int MAX_PENDING;
     private final Class type;
     private final Consumer<Class> removeTypeFromBus;
     private final ReentrantLock monitor;
     private final Condition typeCondition;
-    private LinkedList<SubscriberN> subscribers;
+    private LinkedList<Subscriber> subscribers;
 
     private boolean busIsShuttingDown;
 
-    TypeSubscribersN(int maxPending, Class type, Consumer<Class> removeTypeFromBus) {
+    TypeSubscribers(int maxPending, Class type, Consumer<Class> removeTypeFromBus) {
         this.MAX_PENDING = maxPending;
         this.type = type;
         this.removeTypeFromBus = removeTypeFromBus;
@@ -29,7 +29,7 @@ class TypeSubscribersN {
     void subscribe(Consumer<Object> handler) throws InterruptedException {
         monitor.lock();
 
-        SubscriberN subscriber = new SubscriberN(handler);
+        Subscriber subscriber = new Subscriber(handler);
         subscribers.addLast(subscriber);
 
         try {

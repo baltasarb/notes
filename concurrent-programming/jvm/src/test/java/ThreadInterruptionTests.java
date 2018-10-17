@@ -1,8 +1,9 @@
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class ThreadInterruptionTests {
 
-    @Test
+    @Test @Ignore
     public void t() throws InterruptedException {
 
         Thread t1 = new Thread(() -> {

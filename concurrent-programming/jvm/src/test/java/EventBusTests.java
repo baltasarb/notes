@@ -1,8 +1,6 @@
-import eventBus.EventBusOld;
-import newEventBus.EventBus;
+import eventBus.EventBus;
 import org.junit.Assert;
 import org.junit.Test;
-import sun.awt.windows.ThemeReader;
 
 import java.util.ArrayList;
 import java.util.function.Consumer;
@@ -33,17 +31,11 @@ public class EventBusTests {
         Thread.sleep(100);
         stringPublisher.start();
 
-        Thread.sleep(100);
-        Thread shutdownThread = new Thread(() -> {
-            try {
-                eventBus.shutdown();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        });
 
-        shutdownThread.start();
-        shutdownThread.join();
+        //close the event bus to process all pending messages and be able
+        // to assert correctly
+        Thread.sleep(500);
+        eventBus.shutdown();
 
         Assert.assertTrue(result.contains(expectedResult));
         result.remove(expectedResult);
@@ -58,7 +50,6 @@ public class EventBusTests {
         ArrayList<String> result = new ArrayList<>();
         ArrayList<String> failedResults = new ArrayList<>();
 
-        String expectedResult = "string to publish";
         Consumer<String> stringConsumer = result::add;
 
         Thread stringEventSubscriber = new Thread(() -> {
@@ -68,24 +59,16 @@ public class EventBusTests {
                 failedResults.add("failed");
             }
         });
-
-        Thread stringPublisher = new Thread(() -> eventBus.publishEvent(expectedResult));
+        Thread stringPublisher = new Thread(() -> eventBus.publishEvent("message"));
 
         stringPublisher.start();
         Thread.sleep(100);
         stringEventSubscriber.start();
 
-        Thread.sleep(100);
-        Thread shutdownThread = new Thread(() -> {
-            try {
-                eventBus.shutdown();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        });
-
-        shutdownThread.start();
-        shutdownThread.join();
+        //close the event bus to process all pending messages and be able
+        // to assert correctly
+        Thread.sleep(500);
+        eventBus.shutdown();
 
         Assert.assertTrue(result.isEmpty());
         Assert.assertTrue(failedResults.isEmpty());
@@ -115,17 +98,10 @@ public class EventBusTests {
         Thread.sleep(100);
         intPublisher.start();
 
-        Thread.sleep(100);
-        Thread shutdownThread = new Thread(() -> {
-            try {
-                eventBus.shutdown();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        });
-
-        shutdownThread.start();
-        shutdownThread.join();
+        //close the event bus to process all pending messages and be able
+        // to assert correctly
+        Thread.sleep(500);
+        eventBus.shutdown();
 
         Assert.assertTrue(result.isEmpty());
         Assert.assertTrue(failedResults.isEmpty());
@@ -133,13 +109,19 @@ public class EventBusTests {
 
     @Test
     public void oneSubscriptionMultiplePublicationsOfSameTypeTest() throws InterruptedException {
-        EventBus eventBus = new EventBus(5);
+        EventBus eventBus = new EventBus(10);
 
         ArrayList<Integer> intResults = new ArrayList<>();
 
         int[] event = {0};
 
-        Consumer<Integer> intConsumer = intResults::add;
+        Object monitor = new Object();
+
+        Consumer<Integer> intConsumer = result -> {
+            synchronized (monitor) {
+                intResults.add(result);
+            }
+        };
 
         Thread intEventSubscriber = new Thread(() -> {
             try {
@@ -150,30 +132,37 @@ public class EventBusTests {
         });
 
         Thread intPublisher1 = new Thread(() -> {
-            eventBus.publishEvent(event[0]++);
-            eventBus.publishEvent(event[0]++);
+            int message1;
+            int message2;
+            synchronized (monitor) {
+                message1 = event[0];
+                message2 = ++event[0];
+                event[0]++;
+            }
+            eventBus.publishEvent(message1);
+            eventBus.publishEvent(message2);
         });
         Thread intPublisher2 = new Thread(() -> {
-            eventBus.publishEvent(event[0]++);
-            eventBus.publishEvent(event[0]++);
+            int message1;
+            int message2;
+            synchronized (monitor) {
+                message1 = event[0];
+                message2 = ++event[0];
+                event[0]++;
+            }
+            eventBus.publishEvent(message1);
+            eventBus.publishEvent(message2);
         });
 
         intEventSubscriber.start();
-        Thread.sleep(100);
+        Thread.sleep(1000);
         intPublisher1.start();
         intPublisher2.start();
 
-        Thread.sleep(100);
-        Thread shutdownThread = new Thread(() -> {
-            try {
-                eventBus.shutdown();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        });
-
-        shutdownThread.start();
-        shutdownThread.join();
+        //close the event bus to process all pending messages and be able
+        // to assert correctly
+        Thread.sleep(1000);
+        eventBus.shutdown();
 
         int numberOfMessages = 4;
         for (int i = 0; i < numberOfMessages; i++) {
@@ -183,13 +172,13 @@ public class EventBusTests {
 
     @Test
     public void onePublicationMultipleSubscribersOfSameTypeTest() throws InterruptedException {
-        EventBus eventBus = new EventBus(5);
+        EventBus eventBus = new EventBus(10);
 
         ArrayList<Integer> intSubscriber1Results = new ArrayList<>();
         ArrayList<Integer> intSubscriber2Results = new ArrayList<>();
 
         int[] event = {0};
-        int numberOfMessages = 4;
+        int numberOfMessages = 10;
 
         Consumer<Integer> intConsumer1 = intSubscriber1Results::add;
         Consumer<Integer> intConsumer2 = intSubscriber2Results::add;
@@ -210,6 +199,7 @@ public class EventBusTests {
             }
         });
 
+        //each subscriber must have 10 messages
         Thread intPublisher1 = new Thread(() -> {
             for (int i = 0; i < numberOfMessages; i++)
                 eventBus.publishEvent(event[0]++);
@@ -220,17 +210,10 @@ public class EventBusTests {
         Thread.sleep(100);
         intPublisher1.start();
 
-        Thread.sleep(100);
-        Thread shutdownThread = new Thread(() -> {
-            try {
-                eventBus.shutdown();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        });
-
-        shutdownThread.start();
-        shutdownThread.join();
+        //close the event bus to process all pending messages and be able
+        // to assert correctly
+        Thread.sleep(1000);
+        eventBus.shutdown();
 
         for (int i = 0; i < numberOfMessages; i++) {
             Assert.assertTrue(intSubscriber1Results.contains(i));
@@ -242,7 +225,7 @@ public class EventBusTests {
     public void shutdownTest() throws InterruptedException {
         EventBus eventBus = new EventBus(10);
 
-        int numberOfWorkers = 10;
+        int numberOfWorkers = 1;
 
         int[] intPublicationMessage = {0};
 
@@ -251,9 +234,9 @@ public class EventBusTests {
 
         Object monitor = new Object();
 
-        Consumer<Integer> intSubscriberConsumer = subscriber -> {
-            synchronized (monitor){
-                intResults.add(subscriber);
+        Consumer<Integer> intSubscriberConsumer = result -> {
+            synchronized (monitor) {
+                intResults.add(result);
             }
         };
 
@@ -266,7 +249,12 @@ public class EventBusTests {
         };
 
         Runnable intPublisherTask = () -> {
-            eventBus.publishEvent(intPublicationMessage[0]++);
+            int message;
+            synchronized (monitor) {
+                message = intPublicationMessage[0];
+                intPublicationMessage[0]++;
+            }
+            eventBus.publishEvent(message);
         };
 
         Thread[] subscribers = new Thread[numberOfWorkers];
@@ -277,30 +265,20 @@ public class EventBusTests {
             subscribers[i].start();
         }
 
-        Thread.sleep(250);
+        Thread.sleep(500);
 
         for (int i = 0; i < numberOfWorkers; i++) {
             publishers[i] = new Thread(intPublisherTask);
             publishers[i].start();
         }
 
-        Thread.sleep(250);
-
-        Runnable shutdownTask = () -> {
-            try {
-                eventBus.shutdown();
-            } catch (InterruptedException e) {
-                failedResults.add("Shutdown Interrupted.");
-            }
-        };
-
-        Thread shutdownThread = new Thread(shutdownTask);
-
-        shutdownThread.start();
-
-        shutdownThread.join();
+        //close the event bus to process all pending messages and be able
+        // to assert correctly
+        Thread.sleep(1000);
+        eventBus.shutdown();
 
         for (int i = 0; i < numberOfWorkers; i++) {
+            if(!intResults.contains(i)) System.out.println(i);
             Assert.assertTrue(intResults.contains(i));
             intResults.remove(Integer.valueOf(i));
         }
@@ -309,32 +287,13 @@ public class EventBusTests {
     }
 
     @Test
-    public void runAllNtimes() throws InterruptedException {
-        for (int i = 0; i < 50; i++) {
-            subscriptionBeforePublicationTest();
-            publicationBeforeSubscriptionTest();
-            subscriptionOfDifferedTypePublicationTest();
-            oneSubscriptionMultiplePublicationsOfSameTypeTest();
-            onePublicationMultipleSubscribersOfSameTypeTest();
-            //shutdownTest();
-        }
-    }
-
-    @Test
-    public void runShutdownNTimes() throws InterruptedException {
-        for (int i = 0; i < 20; i++) {
-            shutdownTest();
-        }
-    }
-
-    @Test
     public void stressTest() throws InterruptedException {
-        EventBus eventBus = new EventBus(10);
+        int numberOfWorkers = 1000;
 
-        int numberOfWorkers = 100;
+        EventBus eventBus = new EventBus(numberOfWorkers);
 
         int[] intPublicationMessage = {0};
-        int[] messageIds = {0};
+        int [] stringPublicationMessageId = {0};
 
         ArrayList<Integer> intResults = new ArrayList<>();
         ArrayList<String> stringResults = new ArrayList<>();
@@ -343,12 +302,13 @@ public class EventBusTests {
         Object monitor = new Object();
 
         Consumer<Integer> intSubscriberConsumer = (result) -> {
-            synchronized (monitor){
+            synchronized (monitor) {
                 intResults.add(result);
             }
         };
+
         Consumer<String> stringSubscriberConsumer = result -> {
-            synchronized (monitor){
+            synchronized (monitor) {
                 stringResults.add(result);
             }
         };
@@ -360,6 +320,7 @@ public class EventBusTests {
                 failedResults.add("Exception in int subscriber");
             }
         };
+
         Runnable stringSubscriberTask = () -> {
             try {
                 eventBus.subscribeEvent(stringSubscriberConsumer, String.class);
@@ -369,10 +330,21 @@ public class EventBusTests {
         };
 
         Runnable intPublisherTask = () -> {
-            eventBus.publishEvent(intPublicationMessage[0]++);
+            int message;
+            synchronized (monitor) {
+                message = intPublicationMessage[0];
+                intPublicationMessage[0]++;
+            }
+            eventBus.publishEvent(message);
         };
+
         Runnable stringPublisherTask = () -> {
-            eventBus.publishEvent("message " + messageIds[0]++);
+            int message;
+            synchronized (monitor) {
+                message = stringPublicationMessageId[0];
+                stringPublicationMessageId[0]++;
+            }
+            eventBus.publishEvent("message " + message);
         };
 
         Thread[] subscribers = new Thread[numberOfWorkers];
@@ -390,7 +362,7 @@ public class EventBusTests {
         //enough time for the subscribers to be created
         //if not the message count will not be correct
 
-        Thread.sleep(500);
+        Thread.sleep(numberOfWorkers / 2);
 
         for (int i = 0; i < numberOfWorkers; i++) {
             if (i % 2 == 0) {
@@ -401,35 +373,18 @@ public class EventBusTests {
             publishers[i].start();
         }
 
-        Thread.sleep(500);
-        Runnable shutdownTask = () -> {
-            try {
-                eventBus.shutdown();
-            } catch (InterruptedException e) {
-                failedResults.add("Shutdown Interrupted.");
-            }
-        };
-
-        //enough time for the messages to be handled
-        Thread shutdownThread = new Thread(shutdownTask);
-
-        shutdownThread.start();
-
-        shutdownThread.join();
+        //close the event bus to process all pending messages and be able
+        // to assert correctly
+        Thread.sleep(1000);
+        eventBus.shutdown();
 
         String message = "message ";
         int numberOfMessageIds = numberOfWorkers / 2;
         for (int i = 0; i < numberOfMessageIds; i++) {
-            if (!intResults.contains(i)) {
-                System.out.println(i);
-            }
             Assert.assertTrue(intResults.contains(i));
             intResults.remove(Integer.valueOf(i));
 
             String currentMessage = message + i;
-            if (!stringResults.contains(currentMessage)) {
-                System.out.println(i);
-            }
             Assert.assertTrue(stringResults.contains(currentMessage));
             stringResults.remove(currentMessage);
         }
@@ -438,9 +393,16 @@ public class EventBusTests {
     }
 
     @Test
-    public void stressTestNTimes() throws InterruptedException {
-        for (int i = 0; i < 10; i++) {
+    public void runAllNTimes() throws InterruptedException {
+        for (int i = 0; i < 5; i++) {
+            subscriptionBeforePublicationTest();
+            publicationBeforeSubscriptionTest();
+            subscriptionOfDifferedTypePublicationTest();
+            oneSubscriptionMultiplePublicationsOfSameTypeTest();
+            onePublicationMultipleSubscribersOfSameTypeTest();
             stressTest();
+            shutdownTest();
         }
     }
+
 }

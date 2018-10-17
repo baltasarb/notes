@@ -1,3 +1,4 @@
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
@@ -57,7 +58,7 @@ public class MonitorTests {
         }
     }
 
-    @Test
+    @Test @Ignore
     public void innerMonitorHoldsOuterMonitorTest() throws InterruptedException {
         InnerMonitor innerMonitor = new InnerMonitor();
         OuterMonitor outerMonitor = new OuterMonitor(innerMonitor);
@@ -68,5 +69,7 @@ public class MonitorTests {
 
         //this should not happen as outer is held by inner
         outerMonitor.enterMonitor();
+
+        outerMonitor.notifyOutterMonitor();
     }
 }

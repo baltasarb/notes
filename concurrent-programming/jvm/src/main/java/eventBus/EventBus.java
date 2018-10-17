@@ -1,43 +1,43 @@
-package eventBusV3;
+package eventBus;
 
 import sun.plugin.dom.exception.InvalidStateException;
 
 import java.util.HashMap;
 import java.util.function.Consumer;
 
-public class EventBusN {
+public class EventBus {
 
     private final int MAX_PENDING;
     private final Object monitor;
-    private HashMap<Class, TypeSubscribersN> subscribersByType;
+    private HashMap<Class, TypeSubscribers> subscribersByType;
 
     private boolean isShuttingDown;
 
-    public EventBusN(int maxPending) {
+    public EventBus(int maxPending) {
         this.MAX_PENDING = maxPending;
         this.monitor = new Object();
         subscribersByType = new HashMap<>();
     }
 
     public <T> void subscribeEvent(Consumer<T> handler, Class consumerType) throws InterruptedException {
-        TypeSubscribersN typeSubscribersN;
+        TypeSubscribers typeSubscribers;
         synchronized (monitor) {
             // Prevents new subscribersByType to be added on a system shutdown
             if (isShuttingDown) {
                 throw new InvalidStateException("The bus is shutting down and does not allow new subscriptions.");
             }
             //if the type does not exist, create it, then add the subscriber to it
-            typeSubscribersN = subscribersByType.get(consumerType);
-            if (typeSubscribersN == null) {
-                typeSubscribersN = new TypeSubscribersN(MAX_PENDING, consumerType, this::removeSubscriptionType);
-                subscribersByType.put(consumerType, typeSubscribersN);
+            typeSubscribers = subscribersByType.get(consumerType);
+            if (typeSubscribers == null) {
+                typeSubscribers = new TypeSubscribers(MAX_PENDING, consumerType, this::removeSubscriptionType);
+                subscribersByType.put(consumerType, typeSubscribers);
             }
         }
-        typeSubscribersN.subscribe((Consumer<Object>) handler);
+        typeSubscribers.subscribe((Consumer<Object>) handler);
     }
 
     public <E> void publishEvent(E message) {
-        TypeSubscribersN typeSubscribers;
+        TypeSubscribers typeSubscribers;
 
         synchronized (monitor) {
             if (isShuttingDown) {

@@ -1,14 +1,14 @@
-package eventBusV3;
+package eventBus;
 
 import java.util.LinkedList;
 import java.util.function.Consumer;
 
-class SubscriberN {
+class Subscriber {
 
     private final Consumer<Object> handler;
     private LinkedList<Object> messages;
 
-    SubscriberN(Consumer<Object> handler) {
+    Subscriber(Consumer<Object> handler) {
         this.handler = handler;
         this.messages = new LinkedList<>();
     }

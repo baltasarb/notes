@@ -69,42 +69,4 @@ public class ExpirableLazyTests {
         }
     }
 
-    @Test
-    public void TimeoutBetweenThreadsTest() throws InterruptedException {
-        final int numberOfThreads = 100;
-        final int timeToLive = 100;
-        int[] counter = {0};
-        int [] actualResults = new int[numberOfThreads];
-        int [] expectedResult = new int[numberOfThreads];
-
-        for(int i = 0; i < numberOfThreads; i++){
-            expectedResult[i] = i;
-        }
-
-        Supplier<Integer> supplier = () -> counter[0]++;
-
-        ExpirableLazy<Integer> expirableLazy = new ExpirableLazy<>(supplier, timeToLive);
-
-        Thread [] threads = new Thread[numberOfThreads];
-
-        Consumer<Integer> task = (index) -> {
-            try {
-                actualResults[index] = expirableLazy.getValue();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        };
-
-        for(int i = 0; i < numberOfThreads; i++){
-            int [] index = {i};
-            threads[i] = new Thread(() -> task.accept(index[0]));
-            threads[i].start();
-            Thread.sleep(10);
-        }
-
-        Thread.sleep(1000);
-        for(int i = 0; i < numberOfThreads; i++){
-            assert actualResults[i] == expectedResult[i];
-        }
-    }
 }
