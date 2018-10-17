@@ -3,6 +3,7 @@ package keyedExchanger;
 import Utils.Timer;
 
 import java.util.Optional;
+import java.util.concurrent.locks.Lock;
 
 public class Exchanger<T> {
 
@@ -32,18 +33,17 @@ public class Exchanger<T> {
             }
 
             Timer timer = new Timer(timeout);
-            long timeLeftToWait = timer.getTimeLeftToWait();
 
             if (timer.timeExpired()) {
                 return Optional.empty();
             }
 
             Request request = currentRequest = new Request(myData);
+            long timeLeftToWait = timer.getTimeLeftToWait();
 
             try {
                 while (true) {
                     monitor.wait(timeLeftToWait);
-
                     if (request.data != myData) {
                         return Optional.of(request.data);
                     }
@@ -51,6 +51,8 @@ public class Exchanger<T> {
                         currentRequest = null;
                         return Optional.empty();
                     }
+
+                    timeLeftToWait = timer.getTimeLeftToWait();
                 }
             } catch (InterruptedException e) {
                 if (request.data != myData) {

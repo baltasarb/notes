@@ -1,117 +1,268 @@
 import keyedExchanger.KeyedExchanger;
+import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Optional;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.BiFunction;
 
 public class KeyedExchangerTests {
 
     @Test
     public void exchangeBetweenTwoThreadsTest() throws InterruptedException {
-        KeyedExchanger<String> keyedExchanger = new KeyedExchanger<>();
-        int pairKey = 1;
-        String message1 = "message from exchanger 1";
-        String message2 = "message from exchanger 2";
+        int numberOfWorkers = 2;
 
-        Thread exchanger1 = new Thread(() -> {
-            try {
-                Optional<String> result = keyedExchanger.exchange(pairKey, message1, 10000);
-                assert result.equals(Optional.of(message2));
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+        //pool to synchronize results with the main thread
+        ExecutorService executor = Executors.newFixedThreadPool(numberOfWorkers);
+        CompletionService<Void> completion = new ExecutorCompletionService<>(executor);
+
+        KeyedExchanger<Integer> exchanger = new KeyedExchanger<>();
+
+        ArrayList<Optional<Integer>> results = new ArrayList<>();
+        ArrayList<String> failedResults = new ArrayList<>();
+
+        Object resultSynchronization = new Object();
+
+        // returns a runnable when called with the arguments of message to send and expected to receive
+        BiFunction<Integer, Integer, Runnable> exchange = (pairKey, messageToSend) ->
+                () -> {
+                    try {
+                        Optional<Integer> result = exchanger.exchange(pairKey, messageToSend, 5000);
+                        synchronized (resultSynchronization) {
+                            results.add(result);
+                        }
+                    } catch (InterruptedException e) {
+                        synchronized (resultSynchronization) {
+                            failedResults.add("failure in : " + messageToSend);
+                        }
+                    }
+                };
+
+        //submit the work to the pool
+        completion.submit(() -> {
+            exchange.apply(0, 1).run();
+            return null;
+        });
+        completion.submit(() -> {
+            exchange.apply(0, 0).run();
+            return null;
         });
 
-        Thread exchanger2 = new Thread(() -> {
-            try {
-                Optional<String> result = keyedExchanger.exchange(pairKey, message2, 10000);
-                assert result.equals(Optional.of(message1));
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        });
+        // wait for all tasks to complete.
+        for (int i = 0; i < numberOfWorkers; ++i) {
+            completion.take(); // will block until the next sub task has completed.
+        }
+        executor.shutdown();
 
-        exchanger1.start();
-        exchanger2.start();
+        //iterate from 0 to numberOfWorkers checking if that result is present in the results container
+        for (int i = 0; i < numberOfWorkers; i++) {
+            Optional<Integer> currentValue = Optional.of(i);
+            Assert.assertTrue(results.contains(currentValue));
+            results.remove(currentValue);
+        }
 
-        Thread.sleep(500);
+        Assert.assertTrue(failedResults.isEmpty());
     }
 
     @Test
     public void timeoutInExchangeBetweenTwoThreadsTest() throws InterruptedException {
-        KeyedExchanger<String> keyedExchanger = new KeyedExchanger<>();
-        int pairKey = 1;
-        String message1 = "message from exchanger 1";
-        String message2 = "message from exchanger 2";
+        int numberOfWorkers = 2;
 
-        Thread exchanger1 = new Thread(() -> {
-            try {
-                Optional<String> result = keyedExchanger.exchange(pairKey, message1, 1);
-                assert result.equals(Optional.empty());
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+        //pool to synchronize results with the main thread
+        ExecutorService executor = Executors.newFixedThreadPool(numberOfWorkers);
+        CompletionService<Void> completion = new ExecutorCompletionService<>(executor);
+
+        KeyedExchanger<Integer> exchanger = new KeyedExchanger<>();
+
+        ArrayList<Optional<Integer>> results = new ArrayList<>();
+        ArrayList<String> failedResults = new ArrayList<>();
+
+        Object resultSynchronization = new Object();
+
+        // returns a runnable when called with the arguments of message to send and expected to receive
+        BiFunction<Integer, Integer, Runnable> exchange = (pairKey, messageToSend) ->
+                () -> {
+                    try {
+                        Optional<Integer> result = exchanger.exchange(pairKey, messageToSend, 0);
+                        synchronized (resultSynchronization) {
+                            results.add(result);
+                        }
+                    } catch (InterruptedException e) {
+                        synchronized (resultSynchronization) {
+                            failedResults.add("failure in : " + messageToSend);
+                        }
+                    }
+                };
+
+        //submit the work to the pool
+        completion.submit(() -> {
+            exchange.apply(0, 1).run();
+            return null;
+        });
+        completion.submit(() -> {
+            exchange.apply(0, 0).run();
+            return null;
         });
 
-        Thread exchanger2 = new Thread(() -> {
-            try {
-                Optional<String> result = keyedExchanger.exchange(pairKey, message2, 1);
-                assert result.equals(Optional.empty());
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        });
+        // wait for all tasks to complete.
+        for (int i = 0; i < numberOfWorkers; ++i) {
+            completion.take(); // will block until the next sub task has completed.
+        }
+        executor.shutdown();
 
-        exchanger1.start();
-        Thread.sleep(100);
-        exchanger2.start();
+        //iterate from 0 to numberOfWorkers checking if that result is present in the results container
+        for (Optional<Integer> result : results) {
+            Assert.assertEquals(result, Optional.empty());
+        }
 
-        Thread.sleep(500);
-    }
-
-    @Test()
-    public void illegalArgumentsTest() throws InterruptedException {
-        KeyedExchanger<String> keyedExchanger = new KeyedExchanger<>();
-        int pairKey = 1;
-
-        Thread exchanger1 = new Thread(() -> {
-            try {
-                Optional<String> result = keyedExchanger.exchange(pairKey, null, -1);
-                assert result.equals(Optional.empty());
-            } catch (Exception e) {
-                assert e instanceof IllegalArgumentException;
-            }
-        });
-
-        exchanger1.start();
-        Thread.sleep(100);
+        Assert.assertTrue(failedResults.isEmpty());
     }
 
     @Test
-    public void stressTest() throws InterruptedException {
-        KeyedExchanger<Integer> keyedExchanger = new KeyedExchanger<>();
+    public void twoKeysMultipleExchangesEach() throws InterruptedException {
+        int numberOfWorkers = 1000;
 
-        BiFunction<Integer, Integer, Runnable> taskGenerator = (pairKey, messageId) -> () -> {
-            try {
-                Optional<Integer> result = keyedExchanger.exchange(pairKey, messageId, 10000);
-                assert result.equals(Optional.of(messageId+1));
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        };
+        KeyedExchanger<Integer> exchanger = new KeyedExchanger<>();
 
-        int numberOfThreads = 100;
-        int messageId = 0;
-        Thread[] exchangers = new Thread[numberOfThreads];
-        for (int i = 0; i < exchangers.length-1; i+=2) {
-            exchangers[i] = new Thread(taskGenerator.apply(i, messageId));
-            exchangers[i + 1] = new Thread(taskGenerator.apply(i, messageId++));
+        // used to save the results of each thread in a safe manner
+        Object resultAdditionMonitor = new Object();
+
+        //to hold the results of each exchange
+        ArrayList<Optional<Integer>> results = new ArrayList<>(numberOfWorkers);
+
+        //hold the values where an exception occurred if any exist
+        ArrayList<String> failedResults = new ArrayList<>();
+
+        //pool used to synchronize the results with the main thread
+        ExecutorService executor = Executors.newFixedThreadPool(numberOfWorkers);
+        CompletionService<Void> completion = new ExecutorCompletionService<>(executor);
+
+        //returns a Runnable with the task each exchanger will make
+        BiFunction<Integer, Integer, Runnable> taskGenerator = (pairKey, messageId) ->
+                () -> {
+                    try {
+                        Optional<Integer> result = exchanger.exchange(pairKey, messageId, 5000);
+                        synchronized (resultAdditionMonitor) {
+                            results.add(result);
+                        }
+                    } catch (InterruptedException e) {
+                        synchronized (resultAdditionMonitor) {
+                            failedResults.add("result : " + messageId + " failed.");
+                        }
+                    }
+                };
+
+        //submits the work to the thread pool
+        for (int i = 0; i < numberOfWorkers; i++) {
+            //each pair key is given by the current index
+            // each message is the current index on the first worker and current index + 1 on the second worker
+            //this guarantees that each value is unique on the results arrayList
+            int pairKey = i % 2;
+            int message = i;
+            completion.submit(() -> {
+                taskGenerator.apply(pairKey, message).run();
+                return null;
+            });
         }
 
-        for(int i = 0; i < exchangers.length; i++)
-            exchangers[i].start();
+        // wait for all tasks to complete.
+        for (int i = 0; i < numberOfWorkers; ++i) {
+            completion.take(); // will block until the next task has completed.
+        }
 
-        Thread.sleep(1000);
+        executor.shutdown();
+
+        //iterate from 0 to numberOfWorkers checking if that result is present in the results container
+        for (int i = 0; i < numberOfWorkers; i++) {
+            Optional<Integer> currentValue = Optional.of(i);
+            Assert.assertTrue(results.contains(currentValue));
+            results.remove(currentValue);
+        }
+        //assert that no exceptions happened
+        Assert.assertTrue(failedResults.isEmpty());
+    }
+
+    @Test
+    public void multipleKeysOneExchangeEach() throws InterruptedException {
+        int numberOfWorkers = 1000;
+
+        KeyedExchanger<Integer> exchanger = new KeyedExchanger<>();
+
+        // used to save the results of each thread in a safe manner
+        Object resultAdditionMonitor = new Object();
+
+        //to hold the results of each exchange
+        ArrayList<Optional<Integer>> results = new ArrayList<>(numberOfWorkers);
+
+        //hold the values where an exception occurred if any exist
+        ArrayList<String> failedResults = new ArrayList<>();
+
+        //pool used to synchronize the results with the main thread
+        ExecutorService executor = Executors.newFixedThreadPool(numberOfWorkers);
+        CompletionService<Void> completion = new ExecutorCompletionService<>(executor);
+
+        //returns a Runnable with the task each exchanger will make
+        BiFunction<Integer, Integer, Runnable> taskGenerator = (pairKey, messageId) ->
+                () -> {
+                    try {
+                        Optional<Integer> result = exchanger.exchange(pairKey, messageId, 5000);
+                        synchronized (resultAdditionMonitor) {
+                            results.add(result);
+                        }
+                    } catch (InterruptedException e) {
+                        synchronized (resultAdditionMonitor) {
+                            failedResults.add("result : " + messageId + " failed.");
+                        }
+                    }
+                };
+
+        //submits the work to the thread pool
+        for (int i = 0; i < numberOfWorkers - 1; i += 2) {
+            //each pair key is given by the current index
+            // each message is the current index on the first worker and current index + 1 on the second worker
+            //this guarantees that each value is unique on the results arrayList
+            int j = i;
+            completion.submit(() -> {
+                taskGenerator.apply(j, j).run();
+                return null;
+            });
+            completion.submit(() -> {
+                taskGenerator.apply(j, j + 1).run();
+                return null;
+            });
+        }
+
+        // wait for all tasks to complete.
+        for (int i = 0; i < numberOfWorkers; ++i) {
+            completion.take(); // will block until the next task has completed.
+        }
+
+        executor.shutdown();
+
+        //iterate from 0 to numberOfWorkers checking if that result is present in the results container
+        for (int i = 0; i < numberOfWorkers; i++) {
+            Optional<Integer> currentValue = Optional.of(i);
+            Assert.assertTrue(results.contains(currentValue));
+            results.remove(currentValue);
+        }
+        //assert that no exceptions happened
+        Assert.assertTrue(failedResults.isEmpty());
+    }
+
+    @Test
+    public void runAllNTimes() throws InterruptedException {
+        for (int i = 0; i < 5000; i++) {
+            exchangeBetweenTwoThreadsTest();
+            timeoutInExchangeBetweenTwoThreadsTest();
+        }
+
+        for (int i = 0; i < 25; i++) {
+            multipleKeysOneExchangeEach();
+        }
     }
 
 }

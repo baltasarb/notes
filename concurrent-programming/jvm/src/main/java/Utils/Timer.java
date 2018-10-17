@@ -10,11 +10,13 @@ public class Timer {
 
     public long getTimeLeftToWait() {
         long timeLeftToWait = expirationTime - System.currentTimeMillis();
-        return timeLeftToWait <= 0 ? 0 : timeLeftToWait;
+        return timeLeftToWait < 0 ? 0 : timeLeftToWait;
     }
 
+    // the +1 increment guarantees that if the timer initialization is done and a check
+    // to timeExpired() is done immediately after the times will not be the same
     public boolean timeExpired() {
-        return System.currentTimeMillis() > expirationTime;
+        return System.currentTimeMillis() + 1 > expirationTime;
     }
 
 }
