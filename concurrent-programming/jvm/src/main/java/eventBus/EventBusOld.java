@@ -9,16 +9,16 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
-public class EventBus {
+public class EventBusOld {
 
     private final int MAX_PENDING;
     private final ReentrantLock monitor;
     private Condition shutdown;
-    private HashMap<Class, LinkedList<Subscriber>> subscribers;
+    private HashMap<Class, LinkedList<SubscriberOld>> subscribers;
     private boolean isShuttingDown;
     private int numberOfSubscribers;
 
-    public EventBus(int maxPending) {
+    public EventBusOld(int maxPending) {
         MAX_PENDING = maxPending;
         monitor = new ReentrantLock();
         subscribers = new HashMap<>();
@@ -39,7 +39,7 @@ public class EventBus {
         //informs the bus that a new subscriber has arrived, useful for correct shutdown, shutdown waits for this to reach 0
         numberOfSubscribers++;
 
-        Subscriber subscriber = new Subscriber(monitor.newCondition());
+        SubscriberOld subscriber = new SubscriberOld(monitor.newCondition());
 
         //if the type does not have a list, create it, then add the subscriber to it
         addNewSubscriberToSubscribersMap(consumerType, subscriber);
@@ -94,15 +94,14 @@ public class EventBus {
      * @param subscriberType the key to use on the hash map
      * @param subscriber     the value to add to the key's corresponding list
      */
-    private void addNewSubscriberToSubscribersMap(Class subscriberType, Subscriber subscriber) {
+    private void addNewSubscriberToSubscribersMap(Class subscriberType, SubscriberOld subscriber) {
         if (subscribers.get(subscriberType) == null) {
-            LinkedList<Subscriber> subscribersByType = new LinkedList<>();
+            LinkedList<SubscriberOld> subscribersByType = new LinkedList<>();
             subscribers.put(subscriberType, subscribersByType);
         }
         subscribers.get(subscriberType).add(subscriber);
     }
 
-    @SuppressWarnings("unchecked")
     private <T> void handleMessages(LinkedList<Object> messages, Consumer<T> handler) throws InterruptedException {
         try {
             while (messages.size() > 0) {
@@ -115,7 +114,7 @@ public class EventBus {
         }
     }
 
-    private void attemptShutdown(Subscriber subscriber, Class consumerType) {
+    private void attemptShutdown(SubscriberOld subscriber, Class consumerType) {
         numberOfSubscribers--;
         subscribers.get(consumerType).remove(subscriber);
 
@@ -132,7 +131,7 @@ public class EventBus {
             throw new IllegalStateException("The subscribers are shutting down and are unavailable for further publishing.");
         }
 
-        LinkedList<Subscriber> eventSubscribers = subscribers.get(message.getClass());
+        LinkedList<SubscriberOld> eventSubscribers = subscribers.get(message.getClass());
 
         if (eventSubscribers != null) {
             eventSubscribers.forEach((subscriber) -> {
@@ -156,7 +155,9 @@ public class EventBus {
 
         //  awake all subscribers that are sleeping so they begin to handle their messages
         //  shutdown will only be possible when all of them are done
-        shutdown.signalAll();
+        subscribers.forEach((type, subscriberList) -> {
+            subscriberList.forEach(subscriber -> subscriber.getCondition().signal());
+        });
 
         try {
             while (true) {
@@ -167,7 +168,7 @@ public class EventBus {
                 }
 
                 // wait indefinitely for the subscribers to be done
-                shutdown.await(Integer.MAX_VALUE, TimeUnit.MILLISECONDS);
+                shutdown.await();
             }
         } catch (InterruptedException e) {
             isShuttingDown = false;
@@ -176,6 +177,5 @@ public class EventBus {
             monitor.unlock();
         }
     }
-
 
 }

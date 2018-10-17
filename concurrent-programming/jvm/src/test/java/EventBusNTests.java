@@ -1,17 +1,15 @@
-import eventBus.EventBusOld;
-import newEventBus.EventBus;
+import eventBusV3.EventBusN;
 import org.junit.Assert;
 import org.junit.Test;
-import sun.awt.windows.ThemeReader;
 
 import java.util.ArrayList;
 import java.util.function.Consumer;
 
-public class EventBusTests {
+public class EventBusNTests {
 
     @Test
     public void subscriptionBeforePublicationTest() throws InterruptedException {
-        EventBus eventBus = new EventBus(1);
+        EventBusN eventBus = new EventBusN(1);
 
         ArrayList<String> result = new ArrayList<>();
         ArrayList<String> failedResults = new ArrayList<>();
@@ -34,6 +32,7 @@ public class EventBusTests {
         stringPublisher.start();
 
         Thread.sleep(100);
+
         Thread shutdownThread = new Thread(() -> {
             try {
                 eventBus.shutdown();
@@ -53,12 +52,11 @@ public class EventBusTests {
 
     @Test
     public void publicationBeforeSubscriptionTest() throws InterruptedException {
-        EventBus eventBus = new EventBus(1);
+        EventBusN eventBus = new EventBusN(1);
 
         ArrayList<String> result = new ArrayList<>();
         ArrayList<String> failedResults = new ArrayList<>();
 
-        String expectedResult = "string to publish";
         Consumer<String> stringConsumer = result::add;
 
         Thread stringEventSubscriber = new Thread(() -> {
@@ -68,8 +66,7 @@ public class EventBusTests {
                 failedResults.add("failed");
             }
         });
-
-        Thread stringPublisher = new Thread(() -> eventBus.publishEvent(expectedResult));
+        Thread stringPublisher = new Thread(() -> eventBus.publishEvent("message"));
 
         stringPublisher.start();
         Thread.sleep(100);
@@ -93,7 +90,7 @@ public class EventBusTests {
 
     @Test
     public void subscriptionOfDifferedTypePublicationTest() throws InterruptedException {
-        EventBus eventBus = new EventBus(1);
+        EventBusN eventBus = new EventBusN(1);
 
         ArrayList<String> result = new ArrayList<>();
         ArrayList<String> failedResults = new ArrayList<>();
@@ -133,7 +130,7 @@ public class EventBusTests {
 
     @Test
     public void oneSubscriptionMultiplePublicationsOfSameTypeTest() throws InterruptedException {
-        EventBus eventBus = new EventBus(5);
+        EventBusN eventBus = new EventBusN(10);
 
         ArrayList<Integer> intResults = new ArrayList<>();
 
@@ -183,13 +180,13 @@ public class EventBusTests {
 
     @Test
     public void onePublicationMultipleSubscribersOfSameTypeTest() throws InterruptedException {
-        EventBus eventBus = new EventBus(5);
+        EventBusN eventBus = new EventBusN(10);
 
         ArrayList<Integer> intSubscriber1Results = new ArrayList<>();
         ArrayList<Integer> intSubscriber2Results = new ArrayList<>();
 
         int[] event = {0};
-        int numberOfMessages = 4;
+        int numberOfMessages = 10;
 
         Consumer<Integer> intConsumer1 = intSubscriber1Results::add;
         Consumer<Integer> intConsumer2 = intSubscriber2Results::add;
@@ -210,6 +207,7 @@ public class EventBusTests {
             }
         });
 
+        //each subscriber must have 10 messages
         Thread intPublisher1 = new Thread(() -> {
             for (int i = 0; i < numberOfMessages; i++)
                 eventBus.publishEvent(event[0]++);
@@ -240,7 +238,7 @@ public class EventBusTests {
 
     @Test
     public void shutdownTest() throws InterruptedException {
-        EventBus eventBus = new EventBus(10);
+        EventBusN eventBus = new EventBusN(10);
 
         int numberOfWorkers = 10;
 
@@ -309,29 +307,10 @@ public class EventBusTests {
     }
 
     @Test
-    public void runAllNtimes() throws InterruptedException {
-        for (int i = 0; i < 50; i++) {
-            subscriptionBeforePublicationTest();
-            publicationBeforeSubscriptionTest();
-            subscriptionOfDifferedTypePublicationTest();
-            oneSubscriptionMultiplePublicationsOfSameTypeTest();
-            onePublicationMultipleSubscribersOfSameTypeTest();
-            //shutdownTest();
-        }
-    }
-
-    @Test
-    public void runShutdownNTimes() throws InterruptedException {
-        for (int i = 0; i < 20; i++) {
-            shutdownTest();
-        }
-    }
-
-    @Test
     public void stressTest() throws InterruptedException {
-        EventBus eventBus = new EventBus(10);
-
         int numberOfWorkers = 100;
+
+        EventBusN eventBus = new EventBusN(numberOfWorkers);
 
         int[] intPublicationMessage = {0};
         int[] messageIds = {0};
@@ -420,16 +399,10 @@ public class EventBusTests {
         String message = "message ";
         int numberOfMessageIds = numberOfWorkers / 2;
         for (int i = 0; i < numberOfMessageIds; i++) {
-            if (!intResults.contains(i)) {
-                System.out.println(i);
-            }
             Assert.assertTrue(intResults.contains(i));
             intResults.remove(Integer.valueOf(i));
 
             String currentMessage = message + i;
-            if (!stringResults.contains(currentMessage)) {
-                System.out.println(i);
-            }
             Assert.assertTrue(stringResults.contains(currentMessage));
             stringResults.remove(currentMessage);
         }
@@ -443,4 +416,5 @@ public class EventBusTests {
             stressTest();
         }
     }
+
 }

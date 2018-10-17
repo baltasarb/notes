@@ -1,0 +1,45 @@
+package newEventBus;
+
+import java.util.LinkedList;
+import java.util.function.Consumer;
+
+class Subscriber {
+
+    private final Consumer<Object> handler;
+    private LinkedList<Object> messages;
+
+    Subscriber(Consumer<Object> handler) {
+        this.handler = handler;
+        messages = new LinkedList<>();
+    }
+
+    void addMessage(Object message) {
+        messages.addLast(message);
+    }
+
+    boolean hasMessages() {
+        return !messages.isEmpty();
+    }
+
+    LinkedList<Object> getAndClearMessages() {
+        LinkedList<Object> messagesToReturn = messages;
+        messages= new LinkedList<>();
+        return messagesToReturn;
+    }
+
+    int getNumberOfExistingMessages(){
+        return messages.size();
+    }
+
+    void handleMessages(LinkedList<Object> messagesToHandle) throws InterruptedException {
+        try {
+            while (messagesToHandle.size() > 0) {
+                Object message =  messagesToHandle.removeFirst();
+                handler.accept(message);
+            }
+        } catch (Exception e) {
+            String errorMessage = String.format("Handler error : %s", e.getMessage());
+            throw new InterruptedException(errorMessage);
+        }
+    }
+}
