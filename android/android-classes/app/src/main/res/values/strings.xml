@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">android-classes</string>
+    <string name="url_placeholder">Insert url here.</string>
+    <string name="open_in_browser">Open with browser</string>
+    <string name="start_new_activity">Start new Activity</string>
+    <string name="secondary_activity">Secondary Activity</string>
+    <string name="back_to_main_activity">Back to main activity</string>
+    <string name="text_editor_title">Please write an url</string>
+</resources>
