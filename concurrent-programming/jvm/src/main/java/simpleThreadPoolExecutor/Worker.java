@@ -55,11 +55,14 @@ class Worker {
         try {
             while (true) {
                 if (work == null) {
+                    System.out.println("waiting");
                     workerCondition.await(timeToWait, TimeUnit.MILLISECONDS);
+                    System.out.println("out waiting");
+                    System.out.println(workerIsShuttingDown);
                 }
 
                 if (work != null) {
-
+                    System.out.println("working");
                     poolMonitor.unlock();
 
                     try {
@@ -79,7 +82,10 @@ class Worker {
 
                     //when thread is not idle it will not be notified by the shutdown from the pool
                     //so a check is needed here to know if this worker should stop working
+                    //in this case the worker wont go to idle list and will get the work
+                    //from the executor himself
                     if (poolFunctions.poolIsShuttingDown()) {
+                        System.out.println("worker pool is shutting shutdown");
                         workerIsShuttingDown = true;
                     }
                     //submitWork -> shutdown (before executeWork continues)
@@ -128,6 +134,7 @@ class Worker {
     void shutdown() {
         //if no work is present then the thread is currently waiting
         if (work == null) {
+            System.out.println("signaled worker");
             workerCondition.signal();
         }
         workerIsShuttingDown = true;

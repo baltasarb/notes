@@ -110,7 +110,7 @@ public class SimpleThreadPoolExecutor {
 
     public void shutdown() {
         monitor.lock();
-
+        System.out.println("in shutdown");
         if (poolIsShuttingDown) {
             return;
         }
@@ -122,6 +122,11 @@ public class SimpleThreadPoolExecutor {
 
     public boolean awaitTermination(int timeout) throws InterruptedException {
         monitor.lock();
+
+        //todo await termination pode ser chamado antes de um shutdown?
+       /* if(!poolIsShuttingDown){
+            return false;
+        }*/
 
         awaitTerminationCondition = monitor.newCondition();
 
@@ -135,8 +140,9 @@ public class SimpleThreadPoolExecutor {
                 }
 
                 awaitTerminationCondition.await(timeLeftToWait, TimeUnit.MILLISECONDS);
-
+                System.out.println("await left wait");
                 if (timer.timeExpired()) {
+                    System.out.println("time expired");
                     return false;
                 }
 
@@ -150,6 +156,7 @@ public class SimpleThreadPoolExecutor {
 
             throw e;
         } finally {
+            awaitTerminationCondition = null;
             monitor.unlock();
         }
     }

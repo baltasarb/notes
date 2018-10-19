@@ -80,7 +80,7 @@ public class SimpleThreadPoolExecutorTests {
     }
 
     @Test
-    public void executeInPoolWithNoAvailableWorkersButWithCapacityForMore() throws InterruptedException {
+    public void executeInPoolWithNoAvailableWorkersButWithCapacityForMoreTest() throws InterruptedException {
         int maxPoolSize = 2;
         int keepAlive = 1000;
 
@@ -314,6 +314,56 @@ public class SimpleThreadPoolExecutorTests {
     }
 
     @Test
+    public void awaitTerminationBeforeShutdownSuccessTest() throws InterruptedException {
+        int maxPoolSize = 1;
+        int keepAlive = 10000;
+
+        SimpleThreadPoolExecutor pool = new SimpleThreadPoolExecutor(maxPoolSize, keepAlive);
+
+        int[] valueToBeIncremented = {0};
+
+        //error repository
+        ArrayList<String> failedResults = new ArrayList<>();
+
+        //value expected after work is done by execute
+        int expectedValue = 1;
+
+        //work to be done by the pool, should be finalized before shutdown
+        Runnable work = () -> valueToBeIncremented[0]++;
+
+        boolean executeSuccess = false;
+
+        try {
+            executeSuccess = pool.execute(work, 1000);
+        } catch (InterruptedException e) {
+            failedResults.add("Exception while executing." + e.getMessage());
+        }
+
+        //give time for shutdown to execute before await
+        Thread.sleep(100);
+        boolean [] awaitSuccess = {false};
+        new Thread(() -> {
+            try {
+                awaitSuccess[0] = pool.awaitTermination(10000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+
+        //give time for the worker to be initiated before shutdown
+        Thread.sleep(1000);
+        pool.shutdown();
+
+        //wait for the work to be completed in main thread
+        Thread.sleep(1000);
+
+        Assert.assertTrue(failedResults.isEmpty());
+        Assert.assertEquals(expectedValue, valueToBeIncremented[0]);
+        Assert.assertTrue(executeSuccess);
+        Assert.assertTrue(awaitSuccess[0]);
+    }
+
+    @Test
     public void stressTest() throws InterruptedException {
         int maxPoolSize = 50;
         int keepAlive = 1000;
@@ -372,7 +422,7 @@ public class SimpleThreadPoolExecutorTests {
         for (int i = 0; i < 5; i++) {
             executeInEmptyPoolTest();
             executeInPoolWithIdleWorkerTest();
-            executeInPoolWithNoAvailableWorkersButWithCapacityForMore();
+            executeInPoolWithNoAvailableWorkersButWithCapacityForMoreTest();
             executeInPoolAtMaxCapacityTest();
             workExceptionDoesNotAffectThePoolTest();
             shutdownTest();
