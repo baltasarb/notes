@@ -9,6 +9,7 @@ public class EventBus {
 
     private final int MAX_PENDING;
     private final Object monitor;
+
     private HashMap<Class, TypeSubscribers> subscribersByType;
 
     private boolean isShuttingDown;
@@ -62,7 +63,7 @@ public class EventBus {
 
             //  awake all subscribersByType that are sleeping so they begin to handle their messages
             //  shutdown will only be possible when all of them are done
-            subscribersByType.forEach((aClass, typeSubscribers) -> {
+            subscribersByType.forEach((type, typeSubscribers) -> {
                 typeSubscribers.shutdownType();
             });
 

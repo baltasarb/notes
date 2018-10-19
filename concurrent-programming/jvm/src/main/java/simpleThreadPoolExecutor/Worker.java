@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class Worker {
+class Worker {
 
     private final int INCREMENT_WORKER_COUNT = 1;
     private final int DECREMENT_WORKER_COUNT = -1;
@@ -81,7 +81,7 @@ public class Worker {
 
                     //when thread is not idle it will not be notified by the shutdown from the pool
                     //so a check is needed here to know if this worker should stop working
-                    if(poolFunctions.poolIsShuttingDown()){
+                    if (poolFunctions.poolIsShuttingDown()) {
                         workerIsShuttingDown = true;
                     }
                     //submitWork -> shutdown (before executeWork continues)
@@ -92,9 +92,7 @@ public class Worker {
 
                 boolean executorsAreWaiting = poolFunctions.executorsAreWaiting();
 
-                //todo : should time be ignored on shutdown if there are waiting executors?
-                //to guarantee that the maximum number of waiting executors are attended
-                if(executorsAreWaiting){
+                if (executorsAreWaiting) {
                     work = poolFunctions.getExecutorWorkNotifyAndRemoveFromWait();
                     //state of executorsAreWaiting() will change here, but because it has been
                     //kept in a local variable that will not alter the functionality yet.
@@ -108,7 +106,7 @@ public class Worker {
                     poolFunctions.removeIdleWorker(this);
 
                     poolFunctions.updateWorkerCount(DECREMENT_WORKER_COUNT);
-                    if(poolFunctions.poolIsReadyToShutdown()){
+                    if (poolFunctions.poolIsReadyToShutdown()) {
                         poolFunctions.notifyAwaitTermination();
                     }
                     return;

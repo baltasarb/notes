@@ -3,17 +3,18 @@ package messageQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 
-public class ConsumerStatus<T> implements SendStatus{
+public class ConsumerStatus<T> implements SendStatus {
 
-    private T message;
     private final Condition condition;
 
-    ConsumerStatus(Condition condition){
+    private T message;
+
+    ConsumerStatus(Condition condition) {
         this.condition = condition;
         message = null;
     }
 
-    void sendMessageAndsignal(T message){
+    void sendMessageAndsignal(T message) {
         this.message = message;
         condition.signal();
     }
@@ -22,11 +23,11 @@ public class ConsumerStatus<T> implements SendStatus{
         condition.await(timeout, TimeUnit.MILLISECONDS);
     }
 
-    public boolean receivedMessage(){
+    boolean receivedMessage() {
         return message != null;
     }
 
-    public T getMessage(){
+    public T getMessage() {
         return message;
     }
 
@@ -41,7 +42,8 @@ public class ConsumerStatus<T> implements SendStatus{
     }
 
     @Override
-    public boolean await(int timeout) throws InterruptedException {
+    public boolean await(int timeout) {
         return true;
     }
+
 }

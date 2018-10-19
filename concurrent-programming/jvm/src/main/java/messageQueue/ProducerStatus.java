@@ -10,8 +10,9 @@ import java.util.function.Consumer;
 
 public class ProducerStatus<T> implements SendStatus {
 
-    private T message;
     private final Lock monitor;
+
+    private T message;
     private Consumer<ProducerStatus<T>> cancelMessage;
     private Condition condition;
 
@@ -27,7 +28,7 @@ public class ProducerStatus<T> implements SendStatus {
         isCanceled = false;
     }
 
-    public T getMessage(){
+    public T getMessage() {
         return message;
     }
 
@@ -55,7 +56,7 @@ public class ProducerStatus<T> implements SendStatus {
         if (!isCanceled) {
             isCanceled = true;
             cancelMessage.accept(this);
-            if(condition!= null){
+            if (condition != null) {
                 condition.signal();
             }
         }
@@ -108,4 +109,5 @@ public class ProducerStatus<T> implements SendStatus {
             monitor.unlock();
         }
     }
+
 }

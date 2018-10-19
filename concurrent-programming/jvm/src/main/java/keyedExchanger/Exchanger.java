@@ -3,16 +3,19 @@ package keyedExchanger;
 import Utils.Timer;
 
 import java.util.Optional;
-import java.util.concurrent.locks.Lock;
 
 public class Exchanger<T> {
 
     private final Object monitor;
+
     private Request currentRequest;
 
-    private class Request{
+    private class Request {
         private T data;
-        private Request(T data){this.data = data;}
+
+        private Request(T data) {
+            this.data = data;
+        }
     }
 
     public Exchanger() {
@@ -64,4 +67,5 @@ public class Exchanger<T> {
             }
         }
     }
+
 }

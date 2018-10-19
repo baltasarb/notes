@@ -2,7 +2,6 @@ package simpleThreadPoolExecutor;
 
 import Utils.Timer;
 
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;

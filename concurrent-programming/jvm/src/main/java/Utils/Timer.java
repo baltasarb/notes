@@ -19,7 +19,7 @@ public class Timer {
         return System.currentTimeMillis() + 1 > expirationTime;
     }
 
-    public void reset(int timeout){
+    public void reset(int timeout) {
         expirationTime = System.currentTimeMillis() + timeout;
     }
 

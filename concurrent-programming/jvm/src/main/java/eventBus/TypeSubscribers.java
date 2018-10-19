@@ -12,6 +12,7 @@ class TypeSubscribers {
     private final Consumer<Class> removeTypeFromBus;
     private final ReentrantLock monitor;
     private final Condition typeCondition;
+
     private LinkedList<Subscriber> subscribers;
 
     private boolean busIsShuttingDown;

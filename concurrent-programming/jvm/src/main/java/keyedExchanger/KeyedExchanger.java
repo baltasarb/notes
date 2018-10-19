@@ -7,6 +7,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class KeyedExchanger<T> {
 
     private final ReentrantLock monitor;
+
     private HashMap<Integer, Exchanger<T>> exchangers;
 
     public KeyedExchanger() {
@@ -18,12 +19,12 @@ public class KeyedExchanger<T> {
         monitor.lock();
         Exchanger<T> exchanger = exchangers.get(key);
 
-        try{
+        try {
             if (exchanger == null) {
                 exchanger = new Exchanger<>();
                 exchangers.put(key, exchanger);
             }
-        }finally {
+        } finally {
             monitor.unlock();
         }
 

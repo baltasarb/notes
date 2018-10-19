@@ -6,6 +6,7 @@ import java.util.function.Consumer;
 class Subscriber {
 
     private final Consumer<Object> handler;
+
     private LinkedList<Object> messages;
 
     Subscriber(Consumer<Object> handler) {

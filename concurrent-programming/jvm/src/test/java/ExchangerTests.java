@@ -2,13 +2,10 @@ import keyedExchanger.Exchanger;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.lang.reflect.Array;
-import java.util.AbstractCollection;
 import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.*;
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class ExchangerTests {
@@ -33,11 +30,11 @@ public class ExchangerTests {
                 () -> {
                     try {
                         Optional<Integer> result = exchanger.exchange(messageToSend, 5000);
-                        synchronized (resultSynchronization){
+                        synchronized (resultSynchronization) {
                             results.add(Optional.of(expectedMessageToReceive).equals(result));
                         }
                     } catch (InterruptedException e) {
-                        synchronized (resultSynchronization){
+                        synchronized (resultSynchronization) {
                             failedResults.add("failure in : " + messageToSend);
                         }
                     }
@@ -87,11 +84,11 @@ public class ExchangerTests {
                 () -> {
                     try {
                         Optional<Integer> result = exchanger.exchange(messageToSend, 0);
-                        synchronized (resultSynchronization){
+                        synchronized (resultSynchronization) {
                             results.add(Optional.empty().equals(result));
                         }
                     } catch (InterruptedException e) {
-                        synchronized (resultSynchronization){
+                        synchronized (resultSynchronization) {
                             failedResults.add("failure in : " + messageToSend);
                         }
                     }

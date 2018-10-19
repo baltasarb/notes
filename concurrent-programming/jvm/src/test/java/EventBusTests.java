@@ -278,7 +278,7 @@ public class EventBusTests {
         eventBus.shutdown();
 
         for (int i = 0; i < numberOfWorkers; i++) {
-            if(!intResults.contains(i)) System.out.println(i);
+            if (!intResults.contains(i)) System.out.println(i);
             Assert.assertTrue(intResults.contains(i));
             intResults.remove(Integer.valueOf(i));
         }
@@ -293,7 +293,7 @@ public class EventBusTests {
         EventBus eventBus = new EventBus(numberOfWorkers);
 
         int[] intPublicationMessage = {0};
-        int [] stringPublicationMessageId = {0};
+        int[] stringPublicationMessageId = {0};
 
         ArrayList<Integer> intResults = new ArrayList<>();
         ArrayList<String> stringResults = new ArrayList<>();
