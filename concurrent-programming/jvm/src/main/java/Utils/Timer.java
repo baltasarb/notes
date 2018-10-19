@@ -2,7 +2,7 @@ package Utils;
 
 public class Timer {
 
-    private final long expirationTime;
+    private long expirationTime;
 
     public Timer(int timeout) {
         expirationTime = System.currentTimeMillis() + timeout;
@@ -17,6 +17,10 @@ public class Timer {
     // to timeExpired() is done immediately after the times will not be the same
     public boolean timeExpired() {
         return System.currentTimeMillis() + 1 > expirationTime;
+    }
+
+    public void reset(int timeout){
+        expirationTime = System.currentTimeMillis() + timeout;
     }
 
 }
