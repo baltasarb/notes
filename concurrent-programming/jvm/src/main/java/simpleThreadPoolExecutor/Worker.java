@@ -25,7 +25,7 @@ class Worker {
         this.poolFunctions = poolFunctions;
         this.work = work;
         this.workerIsShuttingDown = false;
-        System.out.println("worker created");
+
         new Thread(() -> executeWork(keepAliveTime)).start();
 
         poolFunctions.updateWorkerCount(INCREMENT_WORKER_COUNT);
@@ -34,9 +34,9 @@ class Worker {
     void submitWork(Runnable command) {
         poolMonitor.lock();
 
-        //if in shutdown should not take further work
-        if (workerIsShuttingDown) {
-            return;//todo throw exception?
+        //if in shutdown should not take further work unless work had been committed to the pool before
+        if (workerIsShuttingDown && !poolFunctions.executorsAreWaiting()) {
+            return;
         }
 
         this.work = command;
@@ -55,9 +55,7 @@ class Worker {
         try {
             while (true) {
                 if (work == null) {
-                    System.out.println("in wait");
                     workerCondition.await(timeToWait, TimeUnit.MILLISECONDS);
-                    System.out.println("out wait");
                 }
 
                 if (work != null) {
@@ -65,7 +63,7 @@ class Worker {
                     poolMonitor.unlock();
 
                     try {
-                        //work done outside the exclusion to allow for parallelism and prevent possible deadlocks
+                        //work done outside the exclusion to allow for parallelism, prevent possible deadlocks
                         work.run();
                     } catch (Exception e) {
                         //exception ignored
@@ -98,7 +96,6 @@ class Worker {
                     //kept in a local variable that will not alter the functionality yet.
                     //Only on the next iteration
                     poolFunctions.removeIdleWorker(this);
-                    System.out.println("got work from executor");
                 }
 
                 if (workerIsShuttingDown && !executorsAreWaiting) {
@@ -113,7 +110,6 @@ class Worker {
                 }
 
                 if (timer.timeExpired()) {
-                    System.out.println("time expired");
                     poolFunctions.removeIdleWorker(this);
                     poolFunctions.updateWorkerCount(DECREMENT_WORKER_COUNT);
                     return;

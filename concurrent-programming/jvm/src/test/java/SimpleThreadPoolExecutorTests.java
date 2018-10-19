@@ -337,7 +337,6 @@ public class SimpleThreadPoolExecutorTests {
         Runnable work = () -> {
             synchronized (monitor) {
                 int value = valueToBeIncremented[0]++;
-                System.out.println(value);
                 results.add(value);
             }
         };

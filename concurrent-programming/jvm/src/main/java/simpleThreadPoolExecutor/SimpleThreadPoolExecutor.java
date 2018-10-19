@@ -85,7 +85,6 @@ public class SimpleThreadPoolExecutor {
                 executor.awaitForWorker(timeLeftToWait);
 
                 if (executor.workIsDelivered()) {
-                    System.out.println("work delivered after execute wait");
                     return true;
                 }
 
@@ -124,10 +123,6 @@ public class SimpleThreadPoolExecutor {
     public boolean awaitTermination(int timeout) throws InterruptedException {
         monitor.lock();
 
-        if (!poolIsShuttingDown) {
-            return false;
-        }
-
         awaitTerminationCondition = monitor.newCondition();
 
         Timer timer = new Timer(timeout);
@@ -135,7 +130,7 @@ public class SimpleThreadPoolExecutor {
 
         try {
             while (true) {
-                if (numberOfExistingWorkers == 0) {
+                if (numberOfExistingWorkers == 0 && poolIsShuttingDown) {
                     return true;
                 }
 
@@ -148,7 +143,7 @@ public class SimpleThreadPoolExecutor {
                 timeLeftToWait = timer.getTimeLeftToWait();
             }
         } catch (InterruptedException e) {
-            if (numberOfExistingWorkers == 0) {
+            if (numberOfExistingWorkers == 0 && poolIsShuttingDown) {
                 Thread.currentThread().interrupt();
                 return true;
             }

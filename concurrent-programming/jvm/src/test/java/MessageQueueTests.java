@@ -471,9 +471,6 @@ public class MessageQueueTests {
         //only half of the workers are message receivers
         for (int i = 0; i < numberOfWorkers / 2; i++) {
             Optional<Integer> expectedMessage = Optional.of(i);
-            if (!results.contains(expectedMessage)) {
-                System.out.println(expectedMessage);
-            }
             Assert.assertTrue(results.contains(expectedMessage));
             results.remove(expectedMessage);
         }

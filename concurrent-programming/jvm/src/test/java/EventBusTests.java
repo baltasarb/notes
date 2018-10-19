@@ -278,7 +278,6 @@ public class EventBusTests {
         eventBus.shutdown();
 
         for (int i = 0; i < numberOfWorkers; i++) {
-            if (!intResults.contains(i)) System.out.println(i);
             Assert.assertTrue(intResults.contains(i));
             intResults.remove(Integer.valueOf(i));
         }
