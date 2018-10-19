@@ -44,7 +44,7 @@ public class MessageQueueTests {
             }
         };
 
-        //submit the work to the pool
+        //submitWork the work to the pool
         completion.submit(() -> {
             sendTask.run();
             return null;
@@ -93,7 +93,7 @@ public class MessageQueueTests {
             }
         };
 
-        //submit the work to the pool
+        //submitWork the work to the pool
         completion.submit(() -> {
             receiveTask.run();
             return null;
@@ -141,7 +141,7 @@ public class MessageQueueTests {
             }
         };
 
-        //submit the work to the pool
+        //submitWork the work to the pool
         completion.submit(() -> {
             sendTask.run();
             return null;
@@ -183,7 +183,7 @@ public class MessageQueueTests {
             }
         };
 
-        //submit the work to the pool
+        //submitWork the work to the pool
         completion.submit(() -> {
             sendTask.run();
             return null;
@@ -237,7 +237,7 @@ public class MessageQueueTests {
             }
         };
 
-        //submit the work to the pool
+        //submitWork the work to the pool
         completion.submit(() -> {
             sendTask.run();
             return null;
@@ -287,7 +287,7 @@ public class MessageQueueTests {
             }
         };
 
-        //submit the work to the pool
+        //submitWork the work to the pool
         completion.submit(() -> {
             sendTask.run();
             return null;
@@ -326,7 +326,7 @@ public class MessageQueueTests {
             }
         };
 
-        //submit the work to the pool
+        //submitWork the work to the pool
         completion.submit(() -> {
             sendTask.run();
             return null;
@@ -373,7 +373,7 @@ public class MessageQueueTests {
             }
         };
 
-        //submit the work to the pool
+        //submitWork the work to the pool
         completion.submit(() -> {
             sendTask.run();
             return null;
@@ -433,7 +433,7 @@ public class MessageQueueTests {
             }
         };
 
-        //submit the work to the pool
+        //submitWork the work to the pool
         //number of workers dividing by 2 because only half of them are senders
         //the other half are receivers
         for (int i = 0; i < numberOfWorkers / 2; i++) {

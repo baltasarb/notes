@@ -42,7 +42,7 @@ public class KeyedExchangerTests {
                     }
                 };
 
-        //submit the work to the pool
+        //submitWork the work to the pool
         completion.submit(() -> {
             exchange.apply(0, 1).run();
             return null;
@@ -98,7 +98,7 @@ public class KeyedExchangerTests {
                     }
                 };
 
-        //submit the work to the pool
+        //submitWork the work to the pool
         completion.submit(() -> {
             exchange.apply(0, 1).run();
             return null;
