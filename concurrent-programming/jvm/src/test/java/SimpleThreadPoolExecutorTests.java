@@ -348,14 +348,14 @@ public class SimpleThreadPoolExecutorTests {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-        });
+        }).start();
 
         //give time for the worker to be initiated before shutdown
-        Thread.sleep(1000);
+        Thread.sleep(100);
         pool.shutdown();
 
         //wait for the work to be completed in main thread
-        Thread.sleep(1000);
+        Thread.sleep(100);
 
         Assert.assertTrue(failedResults.isEmpty());
         Assert.assertEquals(expectedValue, valueToBeIncremented[0]);
@@ -428,6 +428,7 @@ public class SimpleThreadPoolExecutorTests {
             shutdownTest();
             awaitTerminationSuccessTest();
             awaitTerminationTimeoutTest();
+            awaitTerminationBeforeShutdownSuccessTest();
             stressTest();
         }
     }
