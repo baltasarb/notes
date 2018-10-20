@@ -289,7 +289,7 @@ public class EventBusTests {
 
     @Test
     public void stressTest() throws InterruptedException {
-        int numberOfWorkers = 1000;
+        int numberOfWorkers = 100;
 
         EventBus eventBus = new EventBus(numberOfWorkers);
 
@@ -363,7 +363,7 @@ public class EventBusTests {
         //enough time for the subscribers to be created
         //if not the message count will not be correct
 
-        Thread.sleep(numberOfWorkers / 2);
+        Thread.sleep(numberOfWorkers * 25);
 
         for (int i = 0; i < numberOfWorkers; i++) {
             if (i % 2 == 0) {
@@ -376,7 +376,7 @@ public class EventBusTests {
 
         //close the event bus to process all pending messages and be able
         // to assert correctly
-        Thread.sleep(1000);
+        Thread.sleep(numberOfWorkers * 25);
         eventBus.shutdown();
 
         String message = "message ";
