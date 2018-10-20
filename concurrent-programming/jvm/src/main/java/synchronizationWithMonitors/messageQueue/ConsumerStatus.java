@@ -1,4 +1,4 @@
-package messageQueue;
+package synchronizationWithMonitors.messageQueue;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;

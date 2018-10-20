@@ -1,4 +1,4 @@
-package eventBus;
+package synchronizationWithMonitors.eventBus;
 
 import java.util.LinkedList;
 import java.util.concurrent.locks.Condition;

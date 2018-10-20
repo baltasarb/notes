@@ -1,5 +1,7 @@
-import messageQueue.MessageQueue;
-import messageQueue.SendStatus;
+package synchronizationWithMonitorsTests;
+
+import synchronizationWithMonitors.messageQueue.MessageQueue;
+import synchronizationWithMonitors.messageQueue.SendStatus;
 import org.junit.Assert;
 import org.junit.Test;
 

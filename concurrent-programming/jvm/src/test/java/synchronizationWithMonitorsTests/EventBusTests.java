@@ -1,4 +1,6 @@
-import eventBus.EventBus;
+package synchronizationWithMonitorsTests;
+
+import synchronizationWithMonitors.eventBus.EventBus;
 import org.junit.Assert;
 import org.junit.Test;
 

@@ -1,4 +1,6 @@
-import keyedExchanger.Exchanger;
+package synchronizationWithMonitorsTests;
+
+import synchronizationWithMonitors.keyedExchanger.Exchanger;
 import org.junit.Assert;
 import org.junit.Test;
 

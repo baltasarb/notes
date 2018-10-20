@@ -1,6 +1,8 @@
+package synchronizationWithMonitorsTests;
+
 import org.junit.Assert;
 import org.junit.Test;
-import simpleThreadPoolExecutor.SimpleThreadPoolExecutor;
+import synchronizationWithMonitors.simpleThreadPoolExecutor.SimpleThreadPoolExecutor;
 
 import java.util.ArrayList;
 

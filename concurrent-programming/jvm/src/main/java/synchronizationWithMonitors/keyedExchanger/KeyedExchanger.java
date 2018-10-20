@@ -1,4 +1,4 @@
-package keyedExchanger;
+package synchronizationWithMonitors.keyedExchanger;
 
 import java.util.HashMap;
 import java.util.Optional;

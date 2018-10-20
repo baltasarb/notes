@@ -1,4 +1,4 @@
-package eventBus;
+package synchronizationWithMonitors.eventBus;
 
 import sun.plugin.dom.exception.InvalidStateException;
 

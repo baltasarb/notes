@@ -1,4 +1,4 @@
-package messageQueue;
+package synchronizationWithMonitors.messageQueue;
 
 public interface SendStatus {
 
