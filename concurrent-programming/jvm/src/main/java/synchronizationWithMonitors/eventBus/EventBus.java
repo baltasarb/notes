@@ -10,6 +10,7 @@ public class EventBus {
     private final int MAX_PENDING;
     private final Object monitor;
 
+    //grouping of the subscribers by type
     private HashMap<Class, TypeSubscribers> subscribersByType;
 
     private boolean isShuttingDown;
@@ -27,13 +28,14 @@ public class EventBus {
             if (isShuttingDown) {
                 throw new InvalidStateException("The bus is shutting down and does not allow new subscriptions.");
             }
-            //if the type does not exist, create it, then add the subscriber to it
+            //if the type does not exist, create it
             typeSubscribers = subscribersByType.get(consumerType);
             if (typeSubscribers == null) {
                 typeSubscribers = new TypeSubscribers(MAX_PENDING, consumerType, this::removeSubscriptionType);
                 subscribersByType.put(consumerType, typeSubscribers);
             }
         }
+        //subscription to the event of this type
         typeSubscribers.subscribe((Consumer<Object>) handler);
     }
 
@@ -47,6 +49,7 @@ public class EventBus {
             typeSubscribers = subscribersByType.get(message.getClass());
         }
 
+        //if the type subscribers are present, publish the message to all of them and notify them all
         if (typeSubscribers != null) {
             typeSubscribers.addMessageAndNotifySubscribers(message);
         }
@@ -74,7 +77,7 @@ public class EventBus {
                     if (subscribersByType.isEmpty()) {
                         return;
                     }
-                    // wait indefinitely for the subscribersByType to be done
+                    // wait indefinitely for the subscribersByType shutdown to be done
                     monitor.wait();
                 }
             } catch (InterruptedException e) {
@@ -87,6 +90,8 @@ public class EventBus {
         }
     }
 
+    //method used by the type to remove himself from the subscribersByType container
+    //it also notifies it is the last one to be removed, which happens in case of a shutdown
     private void removeSubscriptionType(Class subscribersType) {
         synchronized (monitor) {
             subscribersByType.remove(subscribersType);

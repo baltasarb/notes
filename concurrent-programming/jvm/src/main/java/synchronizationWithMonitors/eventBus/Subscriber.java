@@ -5,8 +5,10 @@ import java.util.function.Consumer;
 
 class Subscriber {
 
+    //action to perform to each message
     private final Consumer<Object> handler;
 
+    //messages received by publishEvent through the type manager
     private LinkedList<Object> messages;
 
     Subscriber(Consumer<Object> handler) {
@@ -29,8 +31,8 @@ class Subscriber {
     }
 
     /**
-     * @param exclusionGottenMessages messages obtain in the exclusion of the type manager, no new messages can be added
-     *                                while out of this exclusion due to this being a local variable
+     * @param exclusionGottenMessages messages obtained in the exclusion of the type manager, no new messages can be added
+     *                                while out of this exclusion
      * @throws InterruptedException thrown in case of any handler exception
      */
     void handleMessages(LinkedList<Object> exclusionGottenMessages) throws InterruptedException {

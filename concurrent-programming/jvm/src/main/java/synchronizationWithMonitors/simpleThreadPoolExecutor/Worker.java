@@ -8,9 +8,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 class Worker {
 
-    private final int INCREMENT_WORKER_COUNT = 1;
-    private final int DECREMENT_WORKER_COUNT = -1;
-
     private final ReentrantLock poolMonitor;
     private final Condition workerCondition;
     private final SimpleThreadPoolExecutor.PoolFunctions poolFunctions;
@@ -28,7 +25,7 @@ class Worker {
 
         new Thread(() -> executeWork(keepAliveTime)).start();
 
-        poolFunctions.updateWorkerCount(INCREMENT_WORKER_COUNT);
+        poolFunctions.incrementWorkerCount();
     }
 
     void submitWork(Runnable command) {
@@ -103,7 +100,7 @@ class Worker {
                     //if present remove from idle list
                     poolFunctions.removeIdleWorker(this);
 
-                    poolFunctions.updateWorkerCount(DECREMENT_WORKER_COUNT);
+                    poolFunctions.decrementWorkerCount();
                     if (poolFunctions.poolIsReadyToShutdown()) {
                         poolFunctions.notifyAwaitTermination();
                     }
@@ -112,7 +109,7 @@ class Worker {
 
                 if (timer.timeExpired()) {
                     poolFunctions.removeIdleWorker(this);
-                    poolFunctions.updateWorkerCount(DECREMENT_WORKER_COUNT);
+                    poolFunctions.decrementWorkerCount();
                     return;
                 }
 

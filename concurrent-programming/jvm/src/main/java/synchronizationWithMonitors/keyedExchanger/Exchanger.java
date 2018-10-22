@@ -4,6 +4,11 @@ import synchronizationWithMonitors.Utils.Timer;
 
 import java.util.Optional;
 
+/**
+ * This class handles all the exchanges between two threads, not worrying about keys,
+ * leaving that responsibility to the keyedExchanger.
+ * @param <T> the type that this exchanger is currently exchanging
+ */
 public class Exchanger<T> {
 
     private final Object monitor;

@@ -57,7 +57,7 @@ public class SimpleThreadPoolExecutor {
             throw new RejectedExecutionException("The simple thread pool executor is shutting down.");
         }
 
-        //if there are workers available assign work to one of them
+        //if there are workers available submit work to one of them
         if (!idleWorkers.isEmpty()) {
             submitWorkToIdleWorker(command);
             monitor.unlock();
@@ -65,7 +65,7 @@ public class SimpleThreadPoolExecutor {
         }
 
         //if no workers are available check if there is room for one more to be created
-        //and if yes create it and assign work to it
+        //and if yes create it and submit work to it
         if (numberOfExistingWorkers < MAX_POOL_SIZE) {
             submitWorkToNewWorker(command);
             monitor.unlock();
@@ -79,7 +79,9 @@ public class SimpleThreadPoolExecutor {
         long timeLeftToWait = timer.getTimeLeftToWait();
 
         //because work could not be given to a worker the execute will wait for a notification
-        //from an idle one and assign work to it on wait exit
+        //from an idle one
+        //the worker will be responsible for taking the work out of the executor object and
+        //as such, upon wait exit the executor only needs to see if the work is delivered
         try {
             while (true) {
                 executor.awaitForWorker(timeLeftToWait);
@@ -108,6 +110,9 @@ public class SimpleThreadPoolExecutor {
         }
     }
 
+    //notify every idle worker that shutdown is occurring
+    //the currently working workers check if a shutdown has been ordered by the pool
+    //after their work is complete
     public void shutdown() {
         monitor.lock();
         if (poolIsShuttingDown) {
@@ -172,8 +177,12 @@ public class SimpleThreadPoolExecutor {
             return executor.getWork();
         }
 
-        void updateWorkerCount(int valueToAdd) {
-            numberOfExistingWorkers += valueToAdd;
+        void incrementWorkerCount() {
+            numberOfExistingWorkers++;
+        }
+
+        void decrementWorkerCount() {
+            numberOfExistingWorkers--;
         }
 
         void addIdleWorker(Worker worker) {
@@ -184,6 +193,8 @@ public class SimpleThreadPoolExecutor {
             idleWorkers.remove(worker);
         }
 
+        //used by the workers to know, when a shutdown is occurring, if any executors work is currently pending
+        //and needs to be done before the shuttdown process is over
         boolean executorsAreWaiting() {
             return waitingExecutors.size() > 0;
         }
@@ -194,10 +205,12 @@ public class SimpleThreadPoolExecutor {
             }
         }
 
+        //used by the workers to know if they are the last one, to know when to notify awaitTermination()
         boolean poolIsReadyToShutdown() {
             return numberOfExistingWorkers == 0;
         }
 
+        //used by each worker to check, that if upon work completion the pool is shuting down
         boolean poolIsShuttingDown() {
             return poolIsShuttingDown;
         }
