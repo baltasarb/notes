@@ -8,18 +8,24 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
-public class ProducerStatus<T> implements SendStatus {
+/**
+ * This status is used when a send is made before a receive. Because the status is immediately returned
+ * some waiting and canceling functionality needs to be added to it.
+ *
+ * @param <T> the type of the message to send
+ */
+public class SenderStatus<T> implements SendStatus {
 
     private final Lock monitor;
 
     private T message;
-    private Consumer<ProducerStatus<T>> cancelMessage;
+    private Consumer<SenderStatus<T>> cancelMessage;
     private Condition condition;
 
     private boolean isSent;
     private boolean isCanceled;
 
-    ProducerStatus(T message, ReentrantLock monitor, Consumer<ProducerStatus<T>> cancelMessage) {
+    SenderStatus(T message, ReentrantLock monitor, Consumer<SenderStatus<T>> cancelMessage) {
         this.message = message;
         this.monitor = monitor;
         this.cancelMessage = cancelMessage;
@@ -33,8 +39,11 @@ public class ProducerStatus<T> implements SendStatus {
     }
 
     //used by queue inside lock
-    void setMessageSent() {
+    void setMessageSentAndSignal() {
         isSent = true;
+        if(condition != null){
+            condition.signal();
+        }
     }
 
     @Override

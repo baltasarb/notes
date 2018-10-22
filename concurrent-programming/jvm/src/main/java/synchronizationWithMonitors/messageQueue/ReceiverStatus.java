@@ -3,18 +3,25 @@ package synchronizationWithMonitors.messageQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 
-public class ConsumerStatus<T> implements SendStatus {
+/**
+ * this status is used when a receive call is made before any send was called. The status, upon reception of the message,
+ * will have a final state so there is no need for method implementation other than the correct final return
+ *
+ * @param <T> the type of the message to receive
+ */
+public class ReceiverStatus<T> implements SendStatus {
 
+    //condition needed for the sender to notify that a message was just delivered to this receiver
     private final Condition condition;
 
     private T message;
 
-    ConsumerStatus(Condition condition) {
+    ReceiverStatus(Condition condition) {
         this.condition = condition;
         message = null;
     }
 
-    void sendMessageAndsignal(T message) {
+    void sendMessageAndSignal(T message) {
         this.message = message;
         condition.signal();
     }
