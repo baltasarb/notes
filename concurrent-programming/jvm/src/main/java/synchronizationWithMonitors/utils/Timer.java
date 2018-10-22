@@ -1,4 +1,4 @@
-package synchronizationWithMonitors.Utils;
+package synchronizationWithMonitors.utils;
 
 public class Timer {
 

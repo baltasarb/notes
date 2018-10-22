@@ -1,6 +1,6 @@
 package synchronizationWithMonitors.simpleThreadPoolExecutor;
 
-import synchronizationWithMonitors.Utils.Timer;
+import synchronizationWithMonitors.utils.Timer;
 
 import java.util.LinkedList;
 import java.util.concurrent.RejectedExecutionException;

@@ -1,6 +1,6 @@
 package synchronizationWithMonitors.simpleThreadPoolExecutor;
 
-import synchronizationWithMonitors.Utils.Timer;
+import synchronizationWithMonitors.utils.Timer;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
