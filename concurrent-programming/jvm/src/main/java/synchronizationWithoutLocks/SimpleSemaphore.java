@@ -2,15 +2,15 @@ package synchronizationWithoutLocks;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-class SimpleSemaphore {
+public class SimpleSemaphore {
 
     private volatile AtomicInteger units;
 
-    SimpleSemaphore(int units) {
+    public SimpleSemaphore(int units) {
         this.units = new AtomicInteger(units);
     }
 
-    void acquire() {
+    public void acquire() {
         if (tryAcquire()) {
             System.out.println("acquired " + units);
             return;
@@ -28,7 +28,7 @@ class SimpleSemaphore {
         }
     }
 
-    void release() {
+    public void release() {
         int observed;
 
         while (true) {

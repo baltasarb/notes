@@ -1,7 +1,8 @@
-package synchronizationWithoutLocks;
+package synchronizationWithoutLocksTests;
 
 import org.junit.Assert;
 import org.junit.Test;
+import synchronizationWithoutLocks.SimpleSemaphore;
 
 import java.util.ArrayList;
 
