@@ -1,6 +1,6 @@
 package synchronizationWithMonitors.simpleThreadPoolExecutor;
 
-import synchronizationWithMonitors.utils.Timer;
+import utils.Timer;
 
 import java.util.LinkedList;
 import java.util.concurrent.RejectedExecutionException;
@@ -78,8 +78,7 @@ public class SimpleThreadPoolExecutor {
         Timer timer = new Timer(timeout);
         long timeLeftToWait = timer.getTimeLeftToWait();
 
-        //because work could not be given to a worker the execute will wait for a notification
-        //from an idle one
+        //because work could not be given to a worker the execute will wait for a notification from an idle one
         //the worker will be responsible for taking the work out of the executor object and
         //as such, upon wait exit the executor only needs to see if the work is delivered
         try {
@@ -115,9 +114,12 @@ public class SimpleThreadPoolExecutor {
     //after their work is complete
     public void shutdown() {
         monitor.lock();
+
         if (poolIsShuttingDown) {
+            monitor.unlock();
             return;
         }
+
         poolIsShuttingDown = true;
         idleWorkers.forEach(Worker::shutdown);
 
@@ -194,9 +196,9 @@ public class SimpleThreadPoolExecutor {
         }
 
         //used by the workers to know, when a shutdown is occurring, if any executors work is currently pending
-        //and needs to be done before the shuttdown process is over
-        boolean executorsAreWaiting() {
-            return waitingExecutors.size() > 0;
+        //and needs to be done before the shutdown process is over
+        boolean waitingExecutorsIsEmpty() {
+            return waitingExecutors.isEmpty();
         }
 
         void notifyAwaitTermination() {
@@ -210,7 +212,7 @@ public class SimpleThreadPoolExecutor {
             return numberOfExistingWorkers == 0;
         }
 
-        //used by each worker to check, that if upon work completion the pool is shuting down
+        //used by each worker to check, that if upon work completion the pool is shutting down
         boolean poolIsShuttingDown() {
             return poolIsShuttingDown;
         }

@@ -149,14 +149,14 @@ public class SimpleThreadPoolExecutorTests {
             }
         };
         //work to be done by the pool, should use the worker created before
-        Runnable work = () -> valueToBeIncremented[0]++;
+        Runnable waitForAvailableWorkerWork = () -> valueToBeIncremented[0]++;
 
         boolean executeSuccess = false;
 
         try {
             executeSuccess = pool.execute(workingWorker, 1000);
             Thread.sleep(50);
-            executeSuccess = pool.execute(work, 1000);
+            executeSuccess = pool.execute(waitForAvailableWorkerWork, 1000);
         } catch (InterruptedException e) {
             failedResults.add("Exception while executing." + e.getMessage());
         }
@@ -343,7 +343,7 @@ public class SimpleThreadPoolExecutorTests {
 
         //give time for shutdown to execute before await
         Thread.sleep(100);
-        boolean [] awaitSuccess = {false};
+        boolean[] awaitSuccess = {false};
         new Thread(() -> {
             try {
                 awaitSuccess[0] = pool.awaitTermination(10000);
@@ -421,7 +421,7 @@ public class SimpleThreadPoolExecutorTests {
     public void runAllNTimes() throws InterruptedException {
         //due to thread sleeps to synchronize with the main thread some tests take some time
         //therefore only 5 times each
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 10; i++) {
             executeInEmptyPoolTest();
             executeInPoolWithIdleWorkerTest();
             executeInPoolWithNoAvailableWorkersButWithCapacityForMoreTest();

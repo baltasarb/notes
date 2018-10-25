@@ -1,6 +1,6 @@
 package synchronizationWithMonitors.messageQueue;
 
-import synchronizationWithMonitors.utils.Timer;
+import utils.Timer;
 
 import java.util.LinkedList;
 import java.util.Optional;

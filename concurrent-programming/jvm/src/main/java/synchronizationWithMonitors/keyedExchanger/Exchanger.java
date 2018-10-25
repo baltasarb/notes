@@ -1,6 +1,6 @@
 package synchronizationWithMonitors.keyedExchanger;
 
-import synchronizationWithMonitors.utils.Timer;
+import utils.Timer;
 
 import java.util.Optional;
 
