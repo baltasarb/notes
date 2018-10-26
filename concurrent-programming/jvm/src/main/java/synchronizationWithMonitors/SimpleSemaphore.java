@@ -1,5 +1,7 @@
 package synchronizationWithMonitors;
 
+import utils.Timer;
+
 public class SimpleSemaphore {
 
     private final Object monitor;
@@ -10,12 +12,41 @@ public class SimpleSemaphore {
         this.units = units;
     }
 
-    public void acquire() throws InterruptedException {
+    public boolean acquire(int timeout) throws InterruptedException {
         synchronized (monitor) {
-            while (units == 0) {
-                monitor.wait();
+            if (units > 0) {
+                units--;
+                return true;
             }
-            units--;
+
+            if (timeout <= 0) {
+                return false;
+            }
+
+            Timer timer = new Timer(timeout);
+            long timeLeftToWait = timer.getTimeLeftToWait();
+
+            try {
+                while (true) {
+                    monitor.wait(timeLeftToWait);
+
+                    if (units > 0) {
+                        units--;
+                        return true;
+                    }
+
+                    if (timer.timeExpired()) {
+                        return false;
+                    }
+
+                    timeLeftToWait = timer.getTimeLeftToWait();
+                }
+            } catch (InterruptedException e) {
+                if (units > 0) {
+                    monitor.notify();
+                }
+                throw e;
+            }
         }
     }
 

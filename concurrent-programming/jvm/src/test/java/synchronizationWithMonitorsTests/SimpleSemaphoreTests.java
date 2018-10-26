@@ -20,8 +20,8 @@ public class SimpleSemaphoreTests {
 
         Runnable acquireTask = () -> {
             try {
-                semaphore.acquire();
-                results.add(true);
+                boolean result = semaphore.acquire(1000);
+                results.add(result);
             } catch (InterruptedException e) {
                 results.add(false);
             }
@@ -51,8 +51,8 @@ public class SimpleSemaphoreTests {
 
         Runnable acquireTask = () -> {
             try {
-                semaphore.acquire();
-                results.add(true);
+                boolean result = semaphore.acquire(1000);
+                results.add(result);
             } catch (InterruptedException e) {
                 results.add(false);
             }

@@ -1,6 +1,7 @@
 package synchronizationWithoutLocksTests;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import synchronizationWithoutLocks.SimpleSemaphore;
 
@@ -19,8 +20,13 @@ public class SimpleSemaphoreTests {
         ArrayList<Boolean> results = new ArrayList<>();
 
         Runnable acquireTask = () -> {
-            semaphore.acquire();
-            results.add(true);
+            boolean result = false;
+            try {
+                result = semaphore.acquire(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            results.add(result);
         };
 
         Thread[] threads = new Thread[numberOfThreads];
@@ -38,21 +44,32 @@ public class SimpleSemaphoreTests {
     //will block indefinitely in case of failure
     @Test
     public void simpleReleaseTest() throws InterruptedException {
-        int numberOfUnits = 2;
-        int numberOfThreads = 3;
+        int numberOfUnits = 10;
+        int numberOfThreads = 11;
 
         SimpleSemaphore semaphore = new SimpleSemaphore(numberOfUnits);
 
         ArrayList<Boolean> results = new ArrayList<>();
 
+        Object monitor = new Object();
+
         Runnable acquireTask = () -> {
-            semaphore.acquire();
-            results.add(true);
+            boolean result = false;
+            try {
+                result = semaphore.acquire(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            synchronized (monitor){
+                results.add(result);
+            }
         };
 
         Runnable releaseTask = () -> {
             semaphore.release();
-            results.add(true);
+            synchronized (monitor){
+                results.add(true);
+            }
         };
 
         //initiate all acquires and the single release
@@ -78,7 +95,7 @@ public class SimpleSemaphoreTests {
 
     @Test
     public void nTimes() throws InterruptedException {
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 1000; i++) {
             simpleReleaseTest();
         }
     }

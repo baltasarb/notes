@@ -1,44 +1,74 @@
 package synchronizationWithoutLocks;
 
+import utils.Timer;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class SimpleSemaphore {
 
+    private final Object monitor;
     private volatile AtomicInteger units;
+    private volatile AtomicInteger numberOfWaiters;
 
     public SimpleSemaphore(int units) {
+        this.monitor = new Object();
         this.units = new AtomicInteger(units);
+        this.numberOfWaiters = new AtomicInteger(0);
     }
 
-    public void acquire() {
+    public boolean acquire(int timeout) throws InterruptedException {
         if (tryAcquire()) {
-            System.out.println("acquired " + units);
-            return;
+            return true;
         }
 
-        while (true) {
-            int observedUnits = units.get();
+        if (timeout <= 0) {
+            return false;
+        }
 
-            if (observedUnits > 0) {
-                if (units.compareAndSet(observedUnits, observedUnits - 1)) {
-                    System.out.println("acquired " + units + " after wait");
-                    return;
+        Timer timer = new Timer(timeout);
+        long timeLeftToWait = timer.getTimeLeftToWait();
+
+        synchronized (monitor) {
+            numberOfWaiters.incrementAndGet();
+
+            if(tryAcquire()){
+                numberOfWaiters.decrementAndGet();
+                return true;
+            }
+
+            try {
+                while (true) {
+                    monitor.wait(timeLeftToWait);
+
+                    if (tryAcquire()) {
+                        return true;
+                    }
+
+                    if (timer.timeExpired()) {
+                        return false;
+                    }
                 }
+            } catch (InterruptedException e) {
+                if (units.get() > 0) {
+                    monitor.notify();
+                }
+                throw e;
+            } finally {
+                numberOfWaiters.decrementAndGet();
             }
         }
     }
 
     public void release() {
-        int observed;
-
-        while (true) {
-            observed = units.get();
-
-            if (units.compareAndSet(observed, observed + 1)) {
-                System.out.println("released " + units);
-                return;
+        units.incrementAndGet();
+        if (numberOfWaiters.get() > 0) {
+            synchronized (monitor) {
+                if (numberOfWaiters.get() > 0) {
+                    monitor.notify();
+                }
             }
         }
+
     }
 
     private boolean tryAcquire() {
@@ -56,4 +86,5 @@ public class SimpleSemaphore {
             }
         }
     }
+
 }
