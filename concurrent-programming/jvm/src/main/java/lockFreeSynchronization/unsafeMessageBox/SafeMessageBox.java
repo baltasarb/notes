@@ -15,9 +15,8 @@ public class SafeMessageBox <T>{
     }
 
     public T tryConsume() {
-        MessageHolder observedMessageHolder = messageHolder;
-
         while (true) {
+            MessageHolder observedMessageHolder = messageHolder;
             int observedLives = observedMessageHolder.lives.get();
 
             if (observedLives <= 0) {
@@ -25,9 +24,6 @@ public class SafeMessageBox <T>{
                 if (observedMessageHolder == messageHolder) {
                     return null;
                 }
-                //if the message holder has changed, a new attempt can be made to consume the message before returning
-                observedMessageHolder = messageHolder;
-                continue;
             }
 
             if (observedMessageHolder.lives.compareAndSet(observedLives, observedLives - 1)) {
