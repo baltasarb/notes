@@ -2,6 +2,7 @@ package semiLockFreeSynchronization.optimizedMessageQueue;
 
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 
 /**
@@ -14,17 +15,35 @@ public class ReceiverStatus<T> implements SendStatus {
 
     //condition needed for the sender to notify that a message was just delivered to this receiver
     private final Condition condition;
-
-    private T message;
+    private AtomicBoolean isGranted;
+    private volatile T message;
 
     ReceiverStatus(Condition condition) {
         this.condition = condition;
         message = null;
+        isGranted = new AtomicBoolean(false);
+    }
+
+    boolean setIsGranted(){
+        while(true){
+            boolean observedIsGranted = isGranted.get();
+            if(observedIsGranted)
+                return false;
+            if(isGranted.compareAndSet(false, true)){
+                return true;
+            }
+        }
+    }
+    void signal() {
+        if (condition != null)
+            condition.signal();
     }
 
     void sendMessageAndSignal(T message) {
         this.message = message;
-        condition.signal();
+        //used on duplicate receiver created by sender
+        if (condition != null)
+            condition.signal();
     }
 
     void await(long timeout) throws InterruptedException {
@@ -49,5 +68,12 @@ public class ReceiverStatus<T> implements SendStatus {
         return true;
     }
 
+    boolean isGranted() {
+        return isGranted.get();
+    }
+
+    void setMessage(T message){
+        this.message = message;
+    }
 }
 

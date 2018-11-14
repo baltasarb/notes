@@ -1,42 +1,35 @@
 package utils;
 
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class ConcurrentLinkedList<T> {
 
     private final AtomicReference<Node> head;
     private final AtomicReference<Node> tail;
-    private AtomicBoolean isEmpty;
 
     public ConcurrentLinkedList() {
         Node dummy = new Node(null, null);
         this.head = new AtomicReference<>(dummy);
         this.tail = new AtomicReference<>(dummy);
-        isEmpty = new AtomicBoolean(true);
     }
 
     public void addLast(T item) {
         Node newNode = new Node(item, null);
 
         while (true) {
+            Node observedTail = tail.get();
+            Node tailNext = observedTail.next.get();
 
-            Node originalTail = tail.get();
-            Node tailNext = originalTail.next.get();
-
-            if (originalTail == tail.get()) {
-                if (tailNext != null) {
-                    // Queue in intermediate state, advance tail
-                    tail.compareAndSet(originalTail, tailNext);
-                } else {
-                    // In quiescent state, try inserting new node
-                    if (originalTail.next.compareAndSet(null, newNode)) {
-                        // Insertion succeeded, try advancing tail
-                        //if unsuccessful someone already did it
-                        tail.compareAndSet(originalTail, newNode);
-                        return;
-                    }
-                }
+            //if tail next is not null, the list is in an intermediate state
+            if (tailNext != null) {
+                tail.compareAndSet(observedTail, tailNext);
+                continue;
+            }
+            //insert the new node to the next of tail
+            if (observedTail.next.compareAndSet(null, newNode)) {
+                //try to move the tail immediately
+                tail.compareAndSet(observedTail, newNode);
+                return;
             }
         }
     }
@@ -56,12 +49,8 @@ public class ConcurrentLinkedList<T> {
         }
     }
 
-    public void remove(T nodeToRemove) {
-        //TODO mark removed nodes?
-    }
-
     public boolean isEmpty() {
-       return head.get() == tail.get();
+        return head.get().next == null;
     }
 
     private class Node {
@@ -72,24 +61,6 @@ public class ConcurrentLinkedList<T> {
             this.value = value;
             this.next = new AtomicReference<>(next);
         }
-    }
-
-    @Override
-    public String toString() {
-        StringBuilder stringBuilder = new StringBuilder();
-        Node aux = head.get().next.get();
-
-        //if (aux == null)
-         //   System.out.println("head next null");
-
-        while (aux != null) {
-            stringBuilder.append("[");
-            stringBuilder.append(aux.value);
-            stringBuilder.append("]");
-            aux = aux.next.get();
-        }
-
-        return stringBuilder.toString();
     }
 
 }

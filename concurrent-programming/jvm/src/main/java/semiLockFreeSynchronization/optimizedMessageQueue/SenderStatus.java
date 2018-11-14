@@ -3,6 +3,7 @@ package semiLockFreeSynchronization.optimizedMessageQueue;
 import utils.Timer;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -19,15 +20,15 @@ public class SenderStatus<T> implements SendStatus {
     private final Lock monitor;
     private final T message;
 
-    private Condition condition;
+    private volatile Condition condition;
 
-    private boolean isSent;
+    private volatile AtomicBoolean isSent;
 
     SenderStatus(T message, ReentrantLock monitor) {
         this.message = message;
         this.monitor = monitor;
         condition = null;
-        isSent = false;
+        isSent = new AtomicBoolean(false);
     }
 
     public T getMessage() {
@@ -36,25 +37,24 @@ public class SenderStatus<T> implements SendStatus {
 
     //used by queue inside lock
     void setMessageSentAndSignal() {
-        isSent = true;
+        isSent.set(true);
         if (condition != null) {
+            monitor.lock();
             condition.signal();
+            monitor.unlock();
         }
     }
 
     @Override
     public boolean isSent() {
-        monitor.lock();
-        boolean success = isSent;
-        monitor.unlock();
-        return success;
+        return isSent.get();
     }
 
     @Override
     public boolean await(int timeout) throws InterruptedException {
         monitor.lock();
 
-        if (isSent) {
+        if (isSent.get()) {
             monitor.unlock();
             return true;
         }
@@ -73,7 +73,7 @@ public class SenderStatus<T> implements SendStatus {
             while (true) {
                 condition.await(timeLeftToWait, TimeUnit.MILLISECONDS);
 
-                if (isSent) {
+                if (isSent.get()) {
                     return true;
                 }
 
@@ -84,7 +84,7 @@ public class SenderStatus<T> implements SendStatus {
                 timeLeftToWait = timer.getTimeLeftToWait();
             }
         } catch (InterruptedException e) {
-            if (isSent) {
+            if (isSent.get()) {
                 Thread.currentThread().interrupt();
                 return true;
             }
@@ -93,6 +93,10 @@ public class SenderStatus<T> implements SendStatus {
             condition = null;
             monitor.unlock();
         }
+    }
+
+    boolean trySend(){
+        return isSent.compareAndSet(false,true);
     }
 
 }

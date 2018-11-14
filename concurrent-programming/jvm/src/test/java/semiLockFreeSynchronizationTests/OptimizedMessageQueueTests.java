@@ -312,9 +312,9 @@ public class OptimizedMessageQueueTests {
         Assert.assertTrue(failedResults.isEmpty());
     }
 
-    @Test @Ignore
+    @Test
     public void stressTest() throws InterruptedException {
-        int numberOfWorkers = 4;
+        int numberOfWorkers = 100;
 
         //pool to synchronize results with the main thread
         ExecutorService executor = Executors.newFixedThreadPool(numberOfWorkers);
@@ -447,7 +447,7 @@ public class OptimizedMessageQueueTests {
         // wait for all tasks to complete.
         for (int i = 0; i < numberOfWorkers; ++i) {
             workers[i].start();
-            Thread.sleep(100);
+            //Thread.sleep(100);
         }
 
         for (int i = 0; i < numberOfWorkers; i++) {
@@ -458,7 +458,7 @@ public class OptimizedMessageQueueTests {
         for (int i = 0; i < numberOfWorkers / 2; i++) {
             Optional<Integer> expectedMessage = Optional.of(i);
             if(!results.contains(expectedMessage)){
-                System.out.println("aa");
+                System.out.println("error, expected message: " + expectedMessage);
             }
             Assert.assertTrue(results.contains(expectedMessage));
             results.remove(expectedMessage);
@@ -475,7 +475,8 @@ public class OptimizedMessageQueueTests {
             isNotSentTest();
             awaitSuccessTest();
             awaitFailureTest();
-            //stressTest();
+            stressTest();
+            stressTest2();
         }
     }
 
