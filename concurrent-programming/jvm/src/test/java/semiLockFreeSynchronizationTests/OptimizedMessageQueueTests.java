@@ -1,7 +1,6 @@
 package semiLockFreeSynchronizationTests;
 
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import semiLockFreeSynchronization.optimizedMessageQueue.OptimizedMessageQueue;
 import semiLockFreeSynchronization.optimizedMessageQueue.SendStatus;
@@ -36,7 +35,7 @@ public class OptimizedMessageQueueTests {
 
         Runnable receiveTask = () -> {
             try {
-                Optional<String> result = messageQueue.receive(1000);
+                Optional<String> result = messageQueue.receive(10000);
                 synchronized (resultSynchronization) {
                     results.add(result);
                 }
@@ -66,12 +65,6 @@ public class OptimizedMessageQueueTests {
         Optional<String> expectedResult = Optional.of(messageToSend);
         Assert.assertTrue(results.contains(expectedResult));
         Assert.assertTrue(failedResults.isEmpty());
-    }
-
-    @Test public void r() throws InterruptedException {
-        for (int i = 0; i < 1000; i++) {
-            sendBeforeReceiveTest();
-        }
     }
 
     @Test
@@ -268,6 +261,12 @@ public class OptimizedMessageQueueTests {
     }
 
     @Test
+    public void r () throws InterruptedException {
+        for (int i = 0; i < 1000; i++) {
+            awaitSuccessTest();
+        }
+    }
+    @Test
     public void awaitFailureTest() throws InterruptedException {
         int numberOfWorkers = 1;
 
@@ -313,8 +312,145 @@ public class OptimizedMessageQueueTests {
     }
 
     @Test
+    public void moreProducersThanConsumers() throws InterruptedException {
+        int numberOfProducers = 750;
+        int numberOfConsumers = 500;
+        int totalNumberOfWorkers = numberOfProducers + numberOfConsumers;
+        OptimizedMessageQueue<Integer> messageQueue = new OptimizedMessageQueue<>();
+
+        ArrayList<Optional<Integer>> results = new ArrayList<>();
+        ArrayList<String> failedResults = new ArrayList<>();
+
+        Object resultSynchronization = new Object();
+
+        int[] messageIds = {0};
+
+        Runnable sendTask = () -> {
+            int message;
+            synchronized (resultSynchronization) {
+                message = messageIds[0];
+                messageIds[0]++;
+            }
+            messageQueue.send(message);
+        };
+
+        Runnable receiveTask = () -> {
+            try {
+                Optional<Integer> result = messageQueue.receive(1000);
+                synchronized (resultSynchronization) {
+                    results.add(result);
+                }
+            } catch (InterruptedException e) {
+                synchronized (resultSynchronization) {
+                    failedResults.add("Failure occurred receive.");
+                }
+            }
+        };
+
+        Thread[] workers = new Thread[totalNumberOfWorkers];
+
+        for (int i = 0; i < totalNumberOfWorkers; i++) {
+            if(i < 250 || (i > 750 && i <= 1000)){
+                workers[i] = new Thread(receiveTask);
+            }
+            else {
+                workers[i] = new Thread(sendTask);
+            }
+        }
+
+        // wait for all tasks to complete.
+        for (int i = 0; i < totalNumberOfWorkers; ++i) {
+            workers[i].start();
+        }
+
+        for (int i = 0; i < totalNumberOfWorkers; i++) {
+            workers[i].join();
+        }
+
+        Assert.assertEquals(numberOfConsumers, results.size());
+        Assert.assertTrue(failedResults.isEmpty());
+
+        while(!results.isEmpty()){
+            Optional<Integer> currentResult = results.remove(0);
+            Assert.assertTrue(!results.contains(currentResult));
+        }
+    }
+
+    @Test
+    public void moreConsumersThanProducers() throws InterruptedException {
+        int numberOfProducers = 500;
+        int numberOfConsumers = 750;
+        int totalNumberOfWorkers = numberOfProducers + numberOfConsumers;
+        OptimizedMessageQueue<Integer> messageQueue = new OptimizedMessageQueue<>();
+
+        ArrayList<Optional<Integer>> results = new ArrayList<>();
+        ArrayList<String> failedResults = new ArrayList<>();
+
+        Object resultSynchronization = new Object();
+
+        int[] messageIds = {0};
+
+        Runnable sendTask = () -> {
+            int message;
+            synchronized (resultSynchronization) {
+                message = messageIds[0];
+                messageIds[0]++;
+            }
+            messageQueue.send(message);
+        };
+
+        Runnable receiveTask = () -> {
+            try {
+                Optional<Integer> result = messageQueue.receive(1000);
+                synchronized (resultSynchronization) {
+                    results.add(result);
+                }
+            } catch (InterruptedException e) {
+                synchronized (resultSynchronization) {
+                    failedResults.add("Failure occurred receive.");
+                }
+            }
+        };
+
+        Thread[] workers = new Thread[totalNumberOfWorkers];
+
+        for (int i = 0; i < totalNumberOfWorkers; i++) {
+            if(i < 250 || (i > 750 && i <= 1000)){
+                workers[i] = new Thread(sendTask);
+            }
+            else {
+                workers[i] = new Thread(receiveTask);
+            }
+        }
+
+        // wait for all tasks to complete.
+        for (int i = 0; i < totalNumberOfWorkers; ++i) {
+            workers[i].start();
+        }
+
+        for (int i = 0; i < totalNumberOfWorkers; i++) {
+            workers[i].join();
+        }
+
+        Assert.assertEquals(numberOfConsumers, results.size());
+        Assert.assertTrue(failedResults.isEmpty());
+
+        int expectedEmtpyResults = numberOfConsumers - numberOfProducers;
+        int actualEmptyResults = 0;
+
+        while(!results.isEmpty()){
+            Optional<Integer> currentResult = results.remove(0);
+            if(Optional.empty().equals(currentResult)){
+                actualEmptyResults++;
+            }
+        }
+
+        Assert.assertEquals(expectedEmtpyResults, actualEmptyResults);
+    }
+
+    @Test
     public void stressTest() throws InterruptedException {
-        int numberOfWorkers = 100;
+        int numberOfWorkers = 1000;
 
         //pool to synchronize results with the main thread
         ExecutorService executor = Executors.newFixedThreadPool(numberOfWorkers);
@@ -396,77 +532,6 @@ public class OptimizedMessageQueueTests {
     }
 
     @Test
-    public void stressTest2() throws InterruptedException {
-        int numberOfWorkers = 100;
-
-        OptimizedMessageQueue<Integer> messageQueue = new OptimizedMessageQueue<>();
-
-        ArrayList<Optional<Integer>> results = new ArrayList<>();
-        ArrayList<String> failedResults = new ArrayList<>();
-
-        Object resultSynchronization = new Object();
-
-        int[] messageIds = {0};
-
-        Runnable sendTask = () -> {
-            int message;
-            synchronized (resultSynchronization) {
-                message = messageIds[0];
-                messageIds[0]++;
-            }
-            messageQueue.send(message);
-        };
-
-        Runnable receiveTask = () -> {
-            try {
-                Optional<Integer> result = messageQueue.receive(1000);
-                synchronized (resultSynchronization) {
-                    results.add(result);
-                }
-            } catch (InterruptedException e) {
-                synchronized (resultSynchronization) {
-                    failedResults.add("Failure occurred receive.");
-                }
-            }
-        };
-
-        Thread [] workers = new Thread[numberOfWorkers];
-
-        for (int i = 0; i < numberOfWorkers; i+=2) {
-            int randomNumber = new Random().nextInt();
-
-            if (randomNumber % 2 == 0) {
-                workers[i] = new Thread(sendTask);
-                workers[i + 1] = new Thread(receiveTask);
-            } else {
-                workers[i] = new Thread(receiveTask);
-                workers[i + 1] = new Thread(sendTask);
-            }
-        }
-
-        // wait for all tasks to complete.
-        for (int i = 0; i < numberOfWorkers; ++i) {
-            workers[i].start();
-            //Thread.sleep(100);
-        }
-
-        for (int i = 0; i < numberOfWorkers; i++) {
-            workers[i].join();
-        }
-
-        //only half of the workers are message receivers
-        for (int i = 0; i < numberOfWorkers / 2; i++) {
-            Optional<Integer> expectedMessage = Optional.of(i);
-            if(!results.contains(expectedMessage)){
-                System.out.println("error, expected message: " + expectedMessage);
-            }
-            Assert.assertTrue(results.contains(expectedMessage));
-            results.remove(expectedMessage);
-        }
-        Assert.assertTrue(failedResults.isEmpty());
-    }
-
-    @Test
     public void runAllNTimes() throws InterruptedException {
         for (int i = 0; i < 25; i++) {
             sendBeforeReceiveTest();
@@ -475,8 +540,8 @@ public class OptimizedMessageQueueTests {
             isNotSentTest();
             awaitSuccessTest();
             awaitFailureTest();
+            moreProducersThanConsumers();
             stressTest();
-            stressTest2();
         }
     }
 

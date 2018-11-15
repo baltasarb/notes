@@ -4,112 +4,89 @@ import utils.ConcurrentLinkedList;
 import utils.Timer;
 
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class OptimizedMessageQueue<T> {
 
-    private ReentrantLock monitor;
+    private final ReentrantLock monitor;
+    private final Condition consumersCondition;
 
-    //when a sender arrives to the queue first it will be kept here
-    private volatile ConcurrentLinkedList<SenderStatus<T>> senderStatuses;
+    private ConcurrentLinkedList<MessageStatus<T>> producers;
 
-    //when a receiver arrives to te queue first it will be kept here
-    private volatile ConcurrentLinkedList<ReceiverStatus<T>> receiverStatuses;
-
-    private AtomicInteger waitingReceivers;
+    private AtomicInteger waitingConsumers;
 
     public OptimizedMessageQueue() {
         this.monitor = new ReentrantLock();
-        senderStatuses = new ConcurrentLinkedList<>();
-        receiverStatuses = new ConcurrentLinkedList<>();
-        waitingReceivers = new AtomicInteger(0);
+        producers = new ConcurrentLinkedList<>();
+        waitingConsumers = new AtomicInteger(0);
+        consumersCondition = monitor.newCondition();
     }
 
     public SendStatus send(T sentMsg) {
 
-        SenderStatus<T> senderStatus = new SenderStatus<>(sentMsg, monitor);
-        senderStatuses.addLast(senderStatus);
+        MessageStatus<T> messageStatus = new MessageStatus<>(sentMsg, monitor);
+        producers.addLast(messageStatus);
 
-        if (waitingReceivers.get() == 0) {
-            return senderStatus;
+        if (waitingConsumers.get() == 0) {
+            return messageStatus;
         }
 
         monitor.lock();
 
-        if (waitingReceivers.get() == 0) {
+        if (waitingConsumers.get() == 0) {
             monitor.unlock();
-            return senderStatus;
+            return messageStatus;
         }
 
-        ReceiverStatus<T> receiverStatus = receiverStatuses.removeFirst();
-        if (receiverStatus != null && receiverStatus.setIsGranted()) {
-            receiverStatus.signal();
-            monitor.unlock();
-            return receiverStatus;
-        }
+        consumersCondition.signal();
 
         monitor.unlock();
-        return senderStatus;
+
+        return messageStatus;
     }
 
     public Optional<T> receive(int timeout) throws InterruptedException {
+        waitingConsumers.incrementAndGet();
 
-        waitingReceivers.incrementAndGet();
+        final boolean NO_LOCK_REQUIRED = false;
+        final boolean LOCK_REQUIRED = true;
 
-        SenderStatus<T> senderStatus;
-
-        while (!senderStatuses.isEmpty()) {
-            senderStatus = senderStatuses.removeFirst();
-            if (senderStatus != null) {//might not be sent at this time
-                waitingReceivers.decrementAndGet();
-                Optional<T> message = Optional.of(senderStatus.getMessage());
-                senderStatus.setMessageSentAndSignal();
-                return message;
-            }
+        T message = tryReceive(LOCK_REQUIRED);
+        if (message != null) {
+            waitingConsumers.decrementAndGet();
+            return Optional.of(message);
         }
-
-        monitor.lock();
-        //if a message is already waiting to be received remove it, notify the possible await() and return it
-        while (!senderStatuses.isEmpty()) {
-            senderStatus = senderStatuses.removeFirst();
-            if (senderStatus != null) {//might not be sent at this time
-                waitingReceivers.decrementAndGet();
-                Optional<T> message = Optional.of(senderStatus.getMessage());
-                senderStatus.setMessageSentAndSignal();
-                monitor.unlock();
-                return message;
-            }
-        }
-
-
-        Timer timer = new Timer(timeout);
-        long timeLeftToWait = timer.getTimeLeftToWait();
-
-        if (timer.timeExpired()) {
-            monitor.unlock();
-            return Optional.empty();
-        }
-
-        //no message could be received so far, so a receiver will be added to the queue,
-        //so that when a send is made this receiver will get the message immediately
-        ReceiverStatus<T> receiverStatus = new ReceiverStatus<>(monitor.newCondition());
-        receiverStatuses.addLast(receiverStatus);
 
         try {
-            while (true) {
-                receiverStatus.await(timeLeftToWait);
+            monitor.lock();
 
-                if (receiverStatus.isGranted()) {
-                    senderStatus = senderStatuses.removeFirst();
-                    T message = senderStatus.getMessage();
-                    receiverStatus.setMessage(message);
+            message = tryReceive(NO_LOCK_REQUIRED);
+            if (message != null) {
+                return Optional.of(message);
+            }
+
+            Timer timer = new Timer(timeout);
+            long timeLeftToWait = timer.getTimeLeftToWait();
+
+            if (timer.timeExpired()) {
+                return Optional.empty();
+            }
+
+            while (true) {
+                consumersCondition.await(timeLeftToWait, TimeUnit.MILLISECONDS);
+
+                //todo how to handle spurious exits?
+
+                message = tryReceive(NO_LOCK_REQUIRED);
+                if (message != null) {
                     return Optional.of(message);
                 }
 
-                //if no one sent a message and time expired, the waiter needs to be removed from the queue and exit
+                //if no one sent a message and time expired
                 if (timer.timeExpired()) {
-                    receiverStatus.setIsGranted();
                     return Optional.empty();
                 }
 
@@ -117,20 +94,38 @@ public class OptimizedMessageQueue<T> {
             }
 
         } catch (InterruptedException e) {
-            if (receiverStatus.isGranted()) {
+            if (!producers.isEmpty()) {
                 Thread.currentThread().interrupt();
-                senderStatus = senderStatuses.removeFirst();
-                T message = senderStatus.getMessage();
-                receiverStatus.setMessage(message);
-                return Optional.of(message);
+                consumersCondition.notify();
+                //todo try to resolve or delegate to another?
+                return Optional.empty();
             }
-            //receiverStatuses.remove(receiverStatus);
             throw e;
         } finally {
-            waitingReceivers.decrementAndGet();
+            waitingConsumers.decrementAndGet();
             monitor.unlock();
         }
     }
 
+    /**
+     *
+     * @param lockRequired is used to tell the possible waiters if the method was called outside exclusion.
+     *                     If that was the case the signal of the await will need to re enter exclusion before the
+     *                     signaling
+     * @return null if no message is present and a T value if present. A correct return will return the received message
+     * otherwise the caller will continue its execution assuming no message is waiting to be received
+     */
+    private T tryReceive(boolean lockRequired) {
+        if (!producers.isEmpty()) {
+            MessageStatus<T> messageStatus = producers.removeFirst();
+            //if no one got to the message first then we are free to continue and return it
+            //otherwise back to waiting
+            if (messageStatus != null) {
+                messageStatus.sendAndSignal(lockRequired);
+                return messageStatus.getMessage();
+            }
+        }
+        return null;
+    }
 
 }

@@ -20,7 +20,7 @@ public class MessageStatus<T> implements SendStatus {
     private final Lock monitor;
     private final T message;
 
-    private volatile Condition condition;
+    private Condition condition;
 
     private volatile boolean isSent;
 
@@ -28,21 +28,29 @@ public class MessageStatus<T> implements SendStatus {
         this.message = message;
         this.monitor = monitor;
         condition = null;
-        isSent =false;
+        isSent = false;
     }
 
-    public T getMessage() {
+    T getMessage() {
         return message;
     }
 
-    //used by queue inside lock
-    void setMessageSentAndSignal() {
+    /**
+     * method used to signal any waiters on await method
+     * @param lockRequired used when this method is called outside the queue's exclusion
+     *                     and guarantees that the await can be signaled correctly
+     */
+    void sendAndSignal(boolean lockRequired) {
         isSent = true;
 
         if (condition != null) {
-            monitor.lock();
-            condition.signal();
-            monitor.unlock();
+            if (lockRequired) {
+                monitor.lock();
+                condition.signal();
+                monitor.unlock();
+            } else {
+                condition.signal();
+            }
         }
     }
 
@@ -69,11 +77,9 @@ public class MessageStatus<T> implements SendStatus {
 
         long timeLeftToWait = timer.getTimeLeftToWait();
         condition = monitor.newCondition();
-
         try {
             while (true) {
                 condition.await(timeLeftToWait, TimeUnit.MILLISECONDS);
-
                 if (isSent) {
                     return true;
                 }
