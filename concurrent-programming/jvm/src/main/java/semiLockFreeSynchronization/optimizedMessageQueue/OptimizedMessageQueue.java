@@ -78,8 +78,6 @@ public class OptimizedMessageQueue<T> {
             while (true) {
                 consumersCondition.await(timeLeftToWait, TimeUnit.MILLISECONDS);
 
-                //todo how to handle spurious exits?
-
                 message = tryReceive(NO_LOCK_REQUIRED);
                 if (message != null) {
                     return Optional.of(message);
@@ -95,10 +93,11 @@ public class OptimizedMessageQueue<T> {
 
         } catch (InterruptedException e) {
             if (!producers.isEmpty()) {
-                Thread.currentThread().interrupt();
-                consumersCondition.notify();
-                //todo try to resolve or delegate to another?
-                return Optional.empty();
+                message = tryReceive(NO_LOCK_REQUIRED);
+                if (message != null) {
+                    Thread.currentThread().interrupt();
+                    return Optional.of(message);
+                }
             }
             throw e;
         } finally {

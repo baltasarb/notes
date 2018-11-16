@@ -261,12 +261,6 @@ public class OptimizedMessageQueueTests {
     }
 
     @Test
-    public void r () throws InterruptedException {
-        for (int i = 0; i < 1000; i++) {
-            awaitSuccessTest();
-        }
-    }
-    @Test
     public void awaitFailureTest() throws InterruptedException {
         int numberOfWorkers = 1;
 
@@ -336,7 +330,7 @@ public class OptimizedMessageQueueTests {
 
         Runnable receiveTask = () -> {
             try {
-                Optional<Integer> result = messageQueue.receive(1000);
+                Optional<Integer> result = messageQueue.receive(2000);
                 synchronized (resultSynchronization) {
                     results.add(result);
                 }
@@ -350,10 +344,9 @@ public class OptimizedMessageQueueTests {
         Thread[] workers = new Thread[totalNumberOfWorkers];
 
         for (int i = 0; i < totalNumberOfWorkers; i++) {
-            if(i < 250 || (i > 750 && i <= 1000)){
+            if (i < 250 || (i > 750 && i <= 1000)) {
                 workers[i] = new Thread(receiveTask);
-            }
-            else {
+            } else {
                 workers[i] = new Thread(sendTask);
             }
         }
@@ -370,8 +363,11 @@ public class OptimizedMessageQueueTests {
         Assert.assertEquals(numberOfConsumers, results.size());
         Assert.assertTrue(failedResults.isEmpty());
 
-        while(!results.isEmpty()){
+        while (!results.isEmpty()) {
             Optional<Integer> currentResult = results.remove(0);
+            if(results.contains(currentResult)){
+                System.out.println("error");
+            }
             Assert.assertTrue(!results.contains(currentResult));
         }
     }
@@ -415,10 +411,11 @@ public class OptimizedMessageQueueTests {
         Thread[] workers = new Thread[totalNumberOfWorkers];
 
         for (int i = 0; i < totalNumberOfWorkers; i++) {
-            if(i < 250 || (i > 750 && i <= 1000)){
+            //used so that the thread start method isnt used sequentially (consumers and then producers)
+            //this way the thread.start() will be interleaved
+            if (i < 250 || (i > 750 && i <= 1000)) {
                 workers[i] = new Thread(sendTask);
-            }
-            else {
+            } else {
                 workers[i] = new Thread(receiveTask);
             }
         }
@@ -438,9 +435,9 @@ public class OptimizedMessageQueueTests {
         int expectedEmtpyResults = numberOfConsumers - numberOfProducers;
         int actualEmptyResults = 0;
 
-        while(!results.isEmpty()){
+        while (!results.isEmpty()) {
             Optional<Integer> currentResult = results.remove(0);
-            if(Optional.empty().equals(currentResult)){
+            if (Optional.empty().equals(currentResult)) {
                 actualEmptyResults++;
             }
         }
@@ -541,6 +538,7 @@ public class OptimizedMessageQueueTests {
             awaitSuccessTest();
             awaitFailureTest();
             moreProducersThanConsumers();
+            moreConsumersThanProducers();
             stressTest();
         }
     }

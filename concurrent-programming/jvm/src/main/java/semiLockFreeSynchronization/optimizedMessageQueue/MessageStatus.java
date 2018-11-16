@@ -36,9 +36,11 @@ public class MessageStatus<T> implements SendStatus {
     }
 
     /**
-     * method used to signal any waiters on await method
-     * @param lockRequired used when this method is called outside the queue's exclusion
+     * method used to signal any waiters on the await method
+     * @param lockRequired used when this method is called outside the queue's exclusion (fast path)
      *                     and guarantees that the await can be signaled correctly
+     *                     (if signaling is necessary, the exclusion acquisition will not need to happen
+     *                     if no one is waiting, because the condition will be set to null)
      */
     void sendAndSignal(boolean lockRequired) {
         isSent = true;
