@@ -118,7 +118,7 @@ public class OptimizedMessageQueue<T> {
         if (!producers.isEmpty()) {
             MessageStatus<T> messageStatus = producers.removeFirst();
             //if no one got to the message first then we are free to continue and return it
-            //otherwise back to waiting
+            //otherwise, back to waiting
             if (messageStatus != null) {
                 messageStatus.sendAndSignal(lockRequired);
                 return messageStatus.getMessage();
