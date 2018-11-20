@@ -178,9 +178,4 @@ public class UnsafeMessageBoxTests {
         Assert.assertEquals(expectedNumberOfUnsuccessfulConsumes, actualNumberOfUnsuccessfulConsumes);
     }
 
-    @Test
-    public void tryConsumeOnePublisher() {
-
-    }
-
 }
