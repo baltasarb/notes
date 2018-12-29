@@ -8,6 +8,10 @@ public class Timer {
         expirationTime = System.currentTimeMillis() + timeout;
     }
 
+    public Timer(long timeout) {
+        expirationTime = System.currentTimeMillis() + timeout;
+    }
+
     public long getTimeLeftToWait() {
         long timeLeftToWait = expirationTime - System.currentTimeMillis();
         return timeLeftToWait < 0 ? 0 : timeLeftToWait;
