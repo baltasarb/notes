@@ -12,7 +12,14 @@ namespace FileTextFinder
         public static async Task<string[]> GetFilePathsFromFolderAsync(string folderPath, string fileType = "*.txt")
         {
             return await Task.Run(() =>
-                Directory.GetFiles(folderPath, fileType, SearchOption.TopDirectoryOnly)
+                {
+                    var result = Directory.GetFiles(folderPath, fileType, SearchOption.TopDirectoryOnly);
+                    if (!result.Any())
+                    {
+                        throw new EmptyFolderException();
+                    }
+                    return result;
+                }
             );
         }
 

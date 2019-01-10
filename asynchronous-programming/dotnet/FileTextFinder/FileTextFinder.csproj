@@ -47,7 +47,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ExceptionHandler.cs" />
+    <Compile Include="exceptions\EmptyFolderException.cs" />
+    <Compile Include="exceptions\ExceptionHandler.cs" />
+    <Compile Include="exceptions\InvalidInputException.cs" />
     <Compile Include="FileUtils.cs" />
     <Compile Include="MainView.cs">
       <SubType>Form</SubType>

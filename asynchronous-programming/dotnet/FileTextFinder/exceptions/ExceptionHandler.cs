@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 
 namespace FileTextFinder
 {
@@ -20,7 +19,9 @@ namespace FileTextFinder
                 {"UnauthorizedAccessException", "Access unauthorized."},
                 {"DirectoryNotFoundException", "The specified directory was not found."},
                 {"PathTooLongException()", "The directory path is too long."},
-                {"IOException()", "Error reading files."}
+                {"IOException()", "Error reading files."},
+                {"EmptyFolderException", "No files were found in the selected folder."},
+                {"InvalidInputException", "Missing input, both fields are required."}
             };
         }
 

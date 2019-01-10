@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace FileTextFinder
@@ -22,44 +23,34 @@ namespace FileTextFinder
 
         private async void beginButton_Click(object sender, EventArgs e)
         {
-            //avoids operation initialization during previous one
+            //avoids operation initialization while current one is executing
             beginButton.Enabled = false;
 
             var folderPath = folderPathTextBox.Text;
             var textToFind = textToFindTextBox.Text;
 
-            if (InputsAreInvalid(folderPath, textToFind))
-            {
-                ShowInvalidStateMessage("Missing input, both fields are required.");
-                return;
-            }
-
-            //enables cancellation, clears current list, renews the token source
-            PrepareSearch();
-
             try
             {
+                ValidateInputsOrThrowException(folderPath, textToFind);
+
+                //enables cancellation, clears current list, renews the token source
+                PrepareSearch();
+
                 //get the file paths from the given folder
                 var filePaths = await FileUtils.GetFilePathsFromFolderAsync(folderPath);
-                if (!filePaths.Any())
-                {
-                    ShowInvalidStateMessage("No files were found in the selected folder.");
-                    return;
-                }
 
                 //search the string in the found files
-                FindTextInFolderFiles(filePaths, textToFind);
+                await FindTextInFolderFiles(filePaths, textToFind);
             }
             catch (Exception ex)
             {
-                if (ex is OperationCanceledException)
-                {
-                    ClearSearchingTextFromListItems();
-                }
-
+                ClearSearchingTextFromListItems();
                 ExceptionHandler.HandleException(ex, ShowInvalidStateMessage);
-                DisableCancelButton();
+            }
+            finally
+            {
                 beginButton.Enabled = true;
+                DisableCancelButton();
             }
         }
 
@@ -76,32 +67,23 @@ namespace FileTextFinder
             _cancellationTokenSource = new CancellationTokenSource();
         }
 
-        private async void FindTextInFolderFiles(string[] filePaths, string textToFind)
+        private async Task FindTextInFolderFiles(string[] filePaths, string textToFind)
         {
             var fileNames = FileUtils.GetFileNamesFromFilePaths(filePaths);
             AddFileNamesToResultsListView(fileNames);
-            try
-            {
-                await FileUtils.FindTextOccurrencesInMultipleFiles(
-                    filePaths,
-                    textToFind,
-                    _cancellationTokenSource.Token,
-                    (index, toUpdate) =>
-                        resultList.BeginInvoke(new UpdateListRowCallback(UpdateListViewRow), index, toUpdate)
-                );
-            }
-            catch (Exception e)
-            {
-                ExceptionHandler.HandleException(e, ShowInvalidStateMessage);
-            }
 
-            beginButton.Enabled = true;
-            DisableCancelButton();
+            await FileUtils.FindTextOccurrencesInMultipleFiles(
+                filePaths,
+                textToFind,
+                _cancellationTokenSource.Token,
+                (index, toUpdate) =>
+                    resultList.BeginInvoke(new UpdateListRowCallback(UpdateListViewRow), index, toUpdate)
+            );
         }
 
-        private static bool InputsAreInvalid(string folderPath, string textToFind)
+        private static void ValidateInputsOrThrowException(string folderPath, string textToFind)
         {
-            return !folderPath.Any() || !textToFind.Any();
+            if(!folderPath.Any() || !textToFind.Any()) throw new InvalidInputException();
         }
 
         //provides feedback on cancellation and error occurrences
