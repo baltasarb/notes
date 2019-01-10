@@ -83,7 +83,7 @@ namespace FileTextFinder
 
         private static void ValidateInputsOrThrowException(string folderPath, string textToFind)
         {
-            if(!folderPath.Any() || !textToFind.Any()) throw new InvalidInputException();
+            if (!folderPath.Any() || !textToFind.Any()) throw new InvalidInputException();
         }
 
         //provides feedback on cancellation and error occurrences
@@ -126,8 +126,24 @@ namespace FileTextFinder
                 textToInsert = "Not found.";
             }
 
-            var item = resultList.Items[index];
-            item.SubItems[1].Text = textToInsert;
+            var row = resultList.Items[index];
+
+
+            row.SubItems[1].Text = textToInsert;
+
+
+            /*            
+             Used to increase column size at runtime
+             not used because it is too taxing on the view
+
+             resultList.BeginUpdate();
+             fileLinesColumnHeader.Width = -1;
+             resultList.EndUpdate();
+
+             or
+
+             resultList.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
+             */
         }
 
         private void DisableCancelButton()

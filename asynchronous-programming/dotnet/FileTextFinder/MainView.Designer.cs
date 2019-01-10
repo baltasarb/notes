@@ -89,7 +89,9 @@
             this.fileNameColumnHeader,
             this.fileLinesColumnHeader});
             this.resultList.GridLines = true;
-            this.resultList.Location = new System.Drawing.Point(50, 60);
+            this.resultList.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable;
+            this.resultList.LabelWrap = false;
+            this.resultList.Location = new System.Drawing.Point(50, 61);
             this.resultList.Name = "resultList";
             this.resultList.Size = new System.Drawing.Size(699, 363);
             this.resultList.TabIndex = 11;
@@ -104,7 +106,7 @@
             // fileLinesColumnHeader
             // 
             this.fileLinesColumnHeader.Text = "File lines";
-            this.fileLinesColumnHeader.Width = 592;
+            this.fileLinesColumnHeader.Width = 593;
             // 
             // cancelButton
             // 

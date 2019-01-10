@@ -45,7 +45,7 @@ namespace FileTextFinder
         {
             IEnumerable<string> lines = File.ReadAllLines(filePath);
             lines = lines.Where(line => line.Contains(toFind));
-            return string.Join(", ", lines);
+            return string.Join(", \n", lines);
         }
 
         public static async Task FindTextOccurrencesInMultipleFiles(string[] filePaths, string textToFind,
