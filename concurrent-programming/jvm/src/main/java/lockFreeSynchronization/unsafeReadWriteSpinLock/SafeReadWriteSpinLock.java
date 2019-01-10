@@ -33,25 +33,15 @@ public class SafeReadWriteSpinLock {
 
     public void LockWrite() throws InterruptedException {
         do {
-            int observedState;
-
-            //decrement
-            do {
-                observedState = state.get();
-            } while (!state.compareAndSet(observedState, observedState - UNLOCKED));
-
-            if (state.get() == 0)
-                return;
-
-            //increment
-            do {
-                observedState = state.get();
-            } while (!state.compareAndSet(observedState, observedState + UNLOCKED));
-
+            int observedState = state.get();
+            if(observedState - UNLOCKED == 0){
+                if(state.compareAndSet(observedState,0)){
+                    return;
+                }
+            }
             do {
                 Thread.sleep(0);
             } while (state.get() != UNLOCKED);
-
         } while (true);
     }
 
