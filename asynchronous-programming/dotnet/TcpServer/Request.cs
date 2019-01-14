@@ -13,7 +13,7 @@ namespace TcpServer
 
         public override string ToString()
         {
-            return $"Method: {Method}, Path: {Path},Headers: {Headers}, Payload: {Payload}";
+           return $"Method: {Method}, Path: {Path},Headers: {Headers}, Payload: {Payload}";
         }
     }
 }
