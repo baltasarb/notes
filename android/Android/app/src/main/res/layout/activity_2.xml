@@ -7,4 +7,27 @@
         android:layout_height="match_parent"
         tools:context=".activityLifecycle.Activity2">
 
+    <EditText
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:inputType="textPersonName"
+            android:text="@string/lifecycle_activity_2_title"
+            android:ems="10"
+            android:id="@+id/lifecycle_activity2Title" android:layout_marginTop="8dp"
+            app:layout_constraintTop_toTopOf="parent" android:layout_marginBottom="8dp"
+            app:layout_constraintBottom_toBottomOf="parent" android:layout_marginStart="52dp"
+            app:layout_constraintStart_toStartOf="parent" app:layout_constraintVertical_bias="0.376"
+            android:layout_marginEnd="8dp" app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.302" android:textAlignment="center"/>
+    <Button
+            android:text="@string/lifecycle_go_to_activity_1_button_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/lifecycleGoToActivity1Button"
+            android:layout_marginTop="8dp"
+            android:onClick="lifecycleGoToActivity1Button"
+            app:layout_constraintTop_toBottomOf="@+id/lifecycle_activity2Title" app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginEnd="8dp" app:layout_constraintStart_toStartOf="parent"
+            android:layout_marginStart="8dp" android:layout_marginBottom="8dp"
+            app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintVertical_bias="0.057"/>
 </android.support.constraint.ConstraintLayout>
