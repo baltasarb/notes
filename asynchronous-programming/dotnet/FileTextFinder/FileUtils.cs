@@ -13,7 +13,7 @@ namespace FileTextFinder
         {
             return await Task.Run(() =>
                 {
-                    var result = Directory.GetFiles(folderPath, fileType, SearchOption.TopDirectoryOnly);
+                    var result = Directory.GetFiles(folderPath, fileType, SearchOption.AllDirectories);
                     if (!result.Any())
                     {
                         throw new EmptyFolderException();
