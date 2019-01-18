@@ -1,4 +1,6 @@
-﻿namespace TcpServer
+﻿using Newtonsoft.Json.Linq;
+
+namespace TcpServer
 {
     public static class ResponseFactory
     {
@@ -12,65 +14,62 @@
             public const int ServiceUnavailable = 503;
         }
 
-
-        public static Response SuccessResponse()
+        private static Response GenericResponse(int status, string details)
         {
             return new Response()
             {
-                Status = StatusCodes.Success,
+                Status = status,
                 Headers = null,
-                Payload = null
+                Payload = null,
+                Details = details
             };
+        }
+
+        private static Response ResponseWithPayload(int status, JObject payload, string details)
+        {
+            return new Response()
+            {
+                Status = status,
+                Headers = null,
+                Payload = payload,
+                Details = details
+            };
+        }
+
+        public static Response SuccessResponse()
+        {
+            return GenericResponse(StatusCodes.Success, "Operation successful");
+        }
+
+        public static Response SuccessResponse(JObject payload)
+        {
+            return ResponseWithPayload(StatusCodes.Success, payload, "Received payload with success.");
         }
 
         public static Response TimeoutResponse()
         {
-            return new Response()
-            {
-                Status = StatusCodes.Timeout,
-                Headers = null,
-                Payload = null
-            };
+            return GenericResponse(StatusCodes.Timeout, "Waiting time expired.");
         }
 
         public static Response InvalidRequestResponse()
         {
-            return new Response()
-            {
-                Status = StatusCodes.InvalidRequest,
-                Headers = null,
-                Payload = null
-            };
+            return GenericResponse(StatusCodes.InvalidRequest, "The request format is incorrect.");
         }
 
         public static Response QueueDoesNotExistResponse()
         {
-            return new Response()
-            {
-                Status = StatusCodes.QueueDoesNotExist,
-                Headers = null,
-                Payload = null
-            };
+            return GenericResponse(StatusCodes.QueueDoesNotExist, "The queue in the parameter path does not exist.");
         }
 
         public static Response ServerErrorResponse()
         {
-            return new Response()
-            {
-                Status = StatusCodes.ServerError,
-                Headers = null,
-                Payload = null
-            };
+            return GenericResponse(StatusCodes.ServerError, "Server error.");
         }
 
         public static Response ServiceUnavailableResponse()
         {
-            return new Response()
-            {
-                Status = StatusCodes.ServiceUnavailable,
-                Headers = null,
-                Payload = null
-            };
+            return GenericResponse(StatusCodes.ServiceUnavailable,
+                "Service is shutting down and unavailable for further requests.");
         }
     }
 }

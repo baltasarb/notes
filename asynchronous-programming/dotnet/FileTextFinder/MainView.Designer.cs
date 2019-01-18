@@ -49,7 +49,7 @@
             this.beginButton.TabIndex = 0;
             this.beginButton.Text = "Begin";
             this.beginButton.UseVisualStyleBackColor = true;
-            this.beginButton.Click += new System.EventHandler(this.beginButton_Click);
+            this.beginButton.Click += new System.EventHandler(this.BeginButton_Click);
             // 
             // folderPathLabel
             // 
@@ -117,7 +117,7 @@
             this.cancelButton.TabIndex = 12;
             this.cancelButton.Text = "Cancel";
             this.cancelButton.UseVisualStyleBackColor = true;
-            this.cancelButton.Click += new System.EventHandler(this.cancelButton_Click);
+            this.cancelButton.Click += new System.EventHandler(this.CancelButton_Click);
             // 
             // fileExplorerButton
             // 
@@ -127,7 +127,7 @@
             this.fileExplorerButton.TabIndex = 13;
             this.fileExplorerButton.Text = "File Explorer";
             this.fileExplorerButton.UseVisualStyleBackColor = true;
-            this.fileExplorerButton.Click += new System.EventHandler(this.button1_Click);
+            this.fileExplorerButton.Click += new System.EventHandler(this.FileExplorerButton_Click);
             // 
             // MainView
             // 

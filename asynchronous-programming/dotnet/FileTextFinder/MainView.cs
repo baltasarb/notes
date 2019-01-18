@@ -9,8 +9,8 @@ namespace FileTextFinder
 {
     public partial class MainView : Form
     {
-        private readonly string _searchingStatusMessage = "Searching...";
-        private readonly string _stoppedStatusMessage = "Stopped.";
+        private const string SearchingStatusMessage = "Searching...";
+        private const string StoppedStatusMessage = "Stopped.";
 
         private CancellationTokenSource _cancellationTokenSource;
 
@@ -21,7 +21,7 @@ namespace FileTextFinder
             InitializeComponent();
         }
 
-        private async void beginButton_Click(object sender, EventArgs e)
+        private async void BeginButton_Click(object sender, EventArgs e)
         {
             //avoids operation initialization while current one is executing
             beginButton.Enabled = false;
@@ -31,9 +31,13 @@ namespace FileTextFinder
 
             try
             {
-                ValidateInputsOrThrowException(folderPath, textToFind);
+                //validate inputs
+                if (!folderPath.Any() || !textToFind.Any())
+                {
+                    throw new InvalidInputException();
+                }
 
-                //enables cancellation, clears current list, renews the token source
+                //enables cancellation, clears current listView, renews the token source
                 PrepareSearch();
 
                 //get the file paths from the given folder
@@ -50,20 +54,14 @@ namespace FileTextFinder
             finally
             {
                 beginButton.Enabled = true;
-                DisableCancelButton();
             }
-        }
-
-        private void cancelButton_Click(object sender, EventArgs e)
-        {
-            _cancellationTokenSource.Cancel();
         }
 
         //enables cancellation, clears current list, renews the token source
         private void PrepareSearch()
         {
             resultList.Items.Clear();
-            EnableCancelButton();
+            cancelButton.Enabled = true;
             _cancellationTokenSource = new CancellationTokenSource();
         }
 
@@ -81,11 +79,6 @@ namespace FileTextFinder
             );
         }
 
-        private static void ValidateInputsOrThrowException(string folderPath, string textToFind)
-        {
-            if (!folderPath.Any() || !textToFind.Any()) throw new InvalidInputException();
-        }
-
         //provides feedback on cancellation and error occurrences
         private static void ShowInvalidStateMessage(string message)
         {
@@ -99,8 +92,8 @@ namespace FileTextFinder
             foreach (ListViewItem listItem in listItems)
             {
                 var linesColumnRow = listItem.SubItems[1];
-                if (linesColumnRow.Text == _searchingStatusMessage)
-                    linesColumnRow.Text = _stoppedStatusMessage;
+                if (linesColumnRow.Text == SearchingStatusMessage)
+                    linesColumnRow.Text = StoppedStatusMessage;
             }
         }
 
@@ -115,7 +108,7 @@ namespace FileTextFinder
         private void AddFileNameToRow(string fileName)
         {
             var itemListView = new ListViewItem(fileName);
-            itemListView.SubItems.Add(_searchingStatusMessage);
+            itemListView.SubItems.Add(SearchingStatusMessage);
             resultList.Items.Add(itemListView);
         }
 
@@ -127,10 +120,7 @@ namespace FileTextFinder
             }
 
             var row = resultList.Items[index];
-
-
             row.SubItems[1].Text = textToInsert;
-
 
             /*            
              Used to increase column size at runtime
@@ -146,17 +136,13 @@ namespace FileTextFinder
              */
         }
 
-        private void DisableCancelButton()
+        private void CancelButton_Click(object sender, EventArgs e)
         {
+            _cancellationTokenSource.Cancel();
             cancelButton.Enabled = false;
         }
 
-        private void EnableCancelButton()
-        {
-            cancelButton.Enabled = true;
-        }
-
-        private void button1_Click(object sender, EventArgs e)
+        private void FileExplorerButton_Click(object sender, EventArgs e)
         {
             FolderBrowserDialog folderDlg = new FolderBrowserDialog {ShowNewFolderButton = true};
 

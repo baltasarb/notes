@@ -1,16 +1,23 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 
 namespace TcpServer
 {
-    public class Server : IServerOperations
+    public class Server
     {
-        private readonly int _initialCapacity = 101;
-        private readonly ConcurrentDictionary<string, ConcurrentQueue<JObject>> _queues;
+        private const int MaximumConcurrentClientsAllowed = 10;
+        private readonly ConcurrentDictionary<string, AsyncQueue<JObject>> _queues;
+
+        private Dictionary<string, Delegate> _methodResolver;
 
         private readonly object _shutdownMonitor;
         private volatile ServerState _serverState;
+
+        private volatile int _activeClients;
 
         private enum ServerState
         {
@@ -19,92 +26,108 @@ namespace TcpServer
             Offline
         };
 
-        public Server(int maximumConcurrency)
+        public Server()
         {
             _shutdownMonitor = new object();
-            _queues = new ConcurrentDictionary<string, ConcurrentQueue<JObject>>(maximumConcurrency, _initialCapacity);
+            _queues = new ConcurrentDictionary<string, AsyncQueue<JObject>>();
             _serverState = ServerState.Online;
+            _activeClients = 0;
+            InitializeMethodResolver();
         }
 
-        public Response Create(Request request)
+        private void InitializeMethodResolver()
         {
-            if (_serverState == ServerState.ShuttingDown)
+            _methodResolver = new Dictionary<string, Delegate>
+            {
+                {"create", new Func<Request, Task<Response>>(Create)},
+                {"send", new Func<Request, Task<Response>>(Send)},
+                {"receive", new Func<Request, Task<Response>>(Receive)},
+                {"shutdown", new Func<Request, Task<Response>>(Shutdown)}
+            };
+        }
+
+        public async Task<Response> ResolveRequest(Request request)
+        {
+            if (_serverState == ServerState.ShuttingDown || _serverState == ServerState.Offline ||
+                _activeClients == MaximumConcurrentClientsAllowed)
             {
                 return ResponseFactory.ServiceUnavailableResponse();
             }
 
-            bool added = _queues.TryAdd(request.Path, new ConcurrentQueue<JObject>());
+            bool methodExists = _methodResolver.TryGetValue(request.Method.ToLower(), out var operation);
 
-            return added ? ResponseFactory.SuccessResponse() : ResponseFactory.InvalidRequestResponse();
-        }
-
-        public Response Send(Request request)
-        {
-            if (_serverState == ServerState.ShuttingDown)
+            if (!methodExists)
             {
-                return ResponseFactory.ServiceUnavailableResponse();
+                return ResponseFactory.InvalidRequestResponse();
             }
 
+            Interlocked.Increment(ref _activeClients);
+
+            return await (Task<Response>) operation.DynamicInvoke(request);
+        }
+
+        private Task<Response> Create(Request request)
+        {
+            bool added = _queues.TryAdd(request.Path, new AsyncQueue<JObject>());
+            Interlocked.Decrement(ref _activeClients);
+            return added
+                ? Task.FromResult(ResponseFactory.SuccessResponse())
+                : Task.FromResult(ResponseFactory.InvalidRequestResponse());
+        }
+
+        private Task<Response> Send(Request request)
+        {
+            bool pathExists = _queues.TryGetValue(request.Path, out var queue);
+
+            Response response;
+
+            if (!pathExists)
+            {
+                response = ResponseFactory.QueueDoesNotExistResponse();
+            }
+
+            else
+            {
+                queue.Enqueue(request.Payload);
+                response = ResponseFactory.SuccessResponse();
+            }
+
+            Interlocked.Decrement(ref _activeClients);
+
+            return Task.FromResult(response);
+        }
+
+        private async Task<Response> Receive(Request request)
+        {
             bool pathExists = _queues.TryGetValue(request.Path, out var queue);
 
             if (!pathExists)
             {
-                return ResponseFactory.QueueDoesNotExistResponse();
+                return ResponseFactory.InvalidRequestResponse();
             }
 
-            queue.Enqueue(request.Payload);
-            return ResponseFactory.SuccessResponse();
+            //todo exception in parsing
+            bool isNumber = int.TryParse(request.Headers["timeout"], out int timeout);
+
+            if (!isNumber) return ResponseFactory.InvalidRequestResponse();
+
+            JObject payload;
+            try
+            {
+                payload = await queue.Dequeue(TimeSpan.FromMilliseconds(timeout), new CancellationTokenSource());
+            }
+            catch (TimeoutException)
+            {
+                return ResponseFactory.TimeoutResponse();
+            }
+
+            return ResponseFactory.SuccessResponse(payload);
         }
 
-        public Response Receive(Request request, out JObject payload)
+        public Task<Response> Shutdown(Request request)
         {
-
 
             throw new System.NotImplementedException();
-        }
-
-        public Response Shutdown(Request request)
-        {
-            if (_serverState == ServerState.Offline)
-            {
-                //todo ?
-                return ResponseFactory.SuccessResponse();
-            }
-
-            if (_serverState == ServerState.ShuttingDown)
-            {
-                //todo already shutting down what to do? multiple waiters?
-                return ResponseFactory.ServiceUnavailableResponse();
-            }
-
-            lock (_shutdownMonitor)
-            {
-                try
-                {
-                    while (true)
-                    {
-                        _serverState = ServerState.ShuttingDown;
-
-                        Monitor.Wait(_shutdownMonitor);
-
-                        if (_serverState == ServerState.Offline)
-                        {
-                            //todo success ??
-                            return ResponseFactory.SuccessResponse();
-                        }
-                    }
-                }
-                catch (ThreadInterruptedException)
-                {
-                    if (_serverState == ServerState.Offline)
-                    {
-                        //todo success ??
-                        return ResponseFactory.SuccessResponse();
-                    }
-
-                    throw;
-                }
-            }
         }
     }
 }

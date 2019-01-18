@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileTextFinder", "FileTextF
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TcpServer", "TcpServer\TcpServer.csproj", "{1704EDE1-3C2B-4955-838B-703130D0D4CC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TcpServerClient", "TcpServerClient\TcpServerClient.csproj", "{ADD91F6B-09DA-4C14-AE46-1C37ED4AE2E7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{1704EDE1-3C2B-4955-838B-703130D0D4CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1704EDE1-3C2B-4955-838B-703130D0D4CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1704EDE1-3C2B-4955-838B-703130D0D4CC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ADD91F6B-09DA-4C14-AE46-1C37ED4AE2E7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ADD91F6B-09DA-4C14-AE46-1C37ED4AE2E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ADD91F6B-09DA-4C14-AE46-1C37ED4AE2E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ADD91F6B-09DA-4C14-AE46-1C37ED4AE2E7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

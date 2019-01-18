@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 
-namespace TcpServer
+namespace TcpServerClient
 {
     // To represent a JSON response
     public class Response
