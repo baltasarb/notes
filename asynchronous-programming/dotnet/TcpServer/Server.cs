@@ -9,29 +9,37 @@ namespace TcpServer
 {
     public class Server
     {
-        private const int MaximumConcurrentClientsAllowed = 10;
+        private readonly object _shutdownMonitor;
+
+        //the server message storage
         private readonly ConcurrentDictionary<string, AsyncQueue<JObject>> _queues;
 
+        //string : method to execute
+        //delegate: the method's corresponding function
         private Dictionary<string, Delegate> _methodResolver;
 
-        private readonly object _shutdownMonitor;
+        //the cancellation mechanism used to shutdown the server
+        private readonly CancellationTokenSource _cancellationTokenSource;
+
+        //the server's state, online or offline
         private volatile ServerState _serverState;
 
-        private volatile int _activeClients;
+        //used to notify the waiting shutdown task that all tasks are finished
+        private readonly CancellationTokenSource _shutdownCompletionSource;
 
         private enum ServerState
         {
             Online,
-            ShuttingDown,
             Offline
         };
 
-        public Server()
+        public Server(CancellationTokenSource cancellationTokenSource)
         {
             _shutdownMonitor = new object();
+            _cancellationTokenSource = cancellationTokenSource;
             _queues = new ConcurrentDictionary<string, AsyncQueue<JObject>>();
             _serverState = ServerState.Online;
-            _activeClients = 0;
+            _shutdownCompletionSource = new CancellationTokenSource();
             InitializeMethodResolver();
         }
 
@@ -46,33 +54,32 @@ namespace TcpServer
             };
         }
 
+        //method responsible for executing the function requested by the client
+        //it chooses one of the available functions inside the _methodResolver structure
         public async Task<Response> ResolveRequest(Request request)
         {
-            if (_serverState == ServerState.ShuttingDown || _serverState == ServerState.Offline ||
-                _activeClients == MaximumConcurrentClientsAllowed)
+            if (_serverState == ServerState.Offline)
             {
                 return ResponseFactory.ServiceUnavailableResponse();
             }
 
-            bool methodExists = _methodResolver.TryGetValue(request.Method.ToLower(), out var operation);
+            bool methodExists = _methodResolver.TryGetValue(request.Method.ToLower(), out var serverOperation);
 
             if (!methodExists)
             {
-                return ResponseFactory.InvalidRequestResponse();
+                return ResponseFactory.InvalidRequestResponse("The provided method is not supported.");
             }
 
-            Interlocked.Increment(ref _activeClients);
-
-            return await (Task<Response>) operation.DynamicInvoke(request);
+            return await (Task<Response>) serverOperation.DynamicInvoke(request);
         }
 
         private Task<Response> Create(Request request)
         {
             bool added = _queues.TryAdd(request.Path, new AsyncQueue<JObject>());
-            Interlocked.Decrement(ref _activeClients);
+
             return added
                 ? Task.FromResult(ResponseFactory.SuccessResponse())
-                : Task.FromResult(ResponseFactory.InvalidRequestResponse());
+                : Task.FromResult(ResponseFactory.InvalidRequestResponse("The given path already exists."));
         }
 
         private Task<Response> Send(Request request)
@@ -89,10 +96,8 @@ namespace TcpServer
             else
             {
                 queue.Enqueue(request.Payload);
-                response = ResponseFactory.SuccessResponse();
+                response = ResponseFactory.SuccessResponse("Message sent with success.");
             }
-
-            Interlocked.Decrement(ref _activeClients);
 
             return Task.FromResult(response);
         }
@@ -103,18 +108,30 @@ namespace TcpServer
 
             if (!pathExists)
             {
-                return ResponseFactory.InvalidRequestResponse();
+                return ResponseFactory.InvalidRequestResponse("The given path does not exist.");
             }
 
-            //todo exception in parsing
-            bool isNumber = int.TryParse(request.Headers["timeout"], out int timeout);
+            int timeout;
+            try
+            {
+                bool timeoutIsNumber = int.TryParse(request.Headers["timeout"], out timeout);
 
-            if (!isNumber) return ResponseFactory.InvalidRequestResponse();
+                if (!timeoutIsNumber) return ResponseFactory.InvalidRequestResponse("Invalid timeout format.");
+
+                if (timeout <= 0)
+                {
+                    return ResponseFactory.TimeoutResponse();
+                }
+            }
+            catch (Exception)
+            {
+                return ResponseFactory.InvalidRequestResponse("Invalid timeout format.");
+            }
 
             JObject payload;
             try
             {
-                payload = await queue.Dequeue(TimeSpan.FromMilliseconds(timeout), new CancellationTokenSource());
+                payload = await queue.Dequeue(TimeSpan.FromMilliseconds(timeout), _cancellationTokenSource);
             }
             catch (TimeoutException)
             {
@@ -124,10 +141,55 @@ namespace TcpServer
             return ResponseFactory.SuccessResponse(payload);
         }
 
-        public Task<Response> Shutdown(Request request)
+        public async Task<Response> Shutdown(Request request)
         {
+            if (_serverState == ServerState.Online)
+            {
+                lock (_shutdownMonitor)
+                {
+                    if (_serverState == ServerState.Online)
+                    {
+                        _serverState = ServerState.Offline;
+                    }
+                }
+            }
 
-            throw new System.NotImplementedException();
+            int timeout;
+            try
+            {
+                bool timeoutIsNumber = int.TryParse(request.Headers["timeout"], out timeout);
+
+                if (!timeoutIsNumber) return ResponseFactory.InvalidRequestResponse("Invalid timeout format.");
+
+                if (timeout <= 0)
+                {
+                    return ResponseFactory.TimeoutResponse();
+                }
+            }
+            catch (Exception)
+            {
+                return ResponseFactory.InvalidRequestResponse("Invalid timeout format.");
+            }
+
+            _cancellationTokenSource.Cancel();
+
+            Response response;
+            try
+            {
+                await Task.Delay(timeout, _shutdownCompletionSource.Token);
+                response = ResponseFactory.TimeoutResponse("The server is shutting down, waiting time expired.");
+            }
+            catch (OperationCanceledException)
+            {
+                response = ResponseFactory.SuccessResponse("Server shutdown successful.");
+            }
+
+            return response;
+        }
+
+        public void NotifyServerShutdownIsComplete()
+        {
+            _shutdownCompletionSource.Cancel();
         }
     }
 }

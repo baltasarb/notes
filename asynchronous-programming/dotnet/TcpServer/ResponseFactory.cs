@@ -36,9 +36,9 @@ namespace TcpServer
             };
         }
 
-        public static Response SuccessResponse()
+        public static Response SuccessResponse(string details = "Operation successful.")
         {
-            return GenericResponse(StatusCodes.Success, "Operation successful");
+            return GenericResponse(StatusCodes.Success, details);
         }
 
         public static Response SuccessResponse(JObject payload)
@@ -46,14 +46,14 @@ namespace TcpServer
             return ResponseWithPayload(StatusCodes.Success, payload, "Received payload with success.");
         }
 
-        public static Response TimeoutResponse()
+        public static Response TimeoutResponse(string details = "Waiting time expired.")
         {
-            return GenericResponse(StatusCodes.Timeout, "Waiting time expired.");
+            return GenericResponse(StatusCodes.Timeout, details);
         }
 
-        public static Response InvalidRequestResponse()
+        public static Response InvalidRequestResponse(string details = "The request format is incorrect.")
         {
-            return GenericResponse(StatusCodes.InvalidRequest, "The request format is incorrect.");
+            return GenericResponse(StatusCodes.InvalidRequest, details);
         }
 
         public static Response QueueDoesNotExistResponse()
@@ -61,15 +61,16 @@ namespace TcpServer
             return GenericResponse(StatusCodes.QueueDoesNotExist, "The queue in the parameter path does not exist.");
         }
 
-        public static Response ServerErrorResponse()
+        public static Response ServerErrorResponse(string details = "Server error.")
         {
-            return GenericResponse(StatusCodes.ServerError, "Server error.");
+            return GenericResponse(StatusCodes.ServerError, details);
         }
 
-        public static Response ServiceUnavailableResponse()
+        public static Response ServiceUnavailableResponse(
+            string details = "Service is shutting down and unavailable for further requests.")
         {
             return GenericResponse(StatusCodes.ServiceUnavailable,
-                "Service is shutting down and unavailable for further requests.");
+                details);
         }
     }
 }

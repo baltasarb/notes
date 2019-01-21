@@ -9,25 +9,40 @@ using Newtonsoft.Json.Linq;
 
 namespace TcpServerClient
 {
-    class ClientApplication
+    internal class ClientApplication
     {
         private const int Port = 8081;
         private static readonly JsonSerializer Serializer = new JsonSerializer();
 
         private static async Task Main()
         {
-            using (TcpClient tcpClient = new TcpClient())
+            using (var tcpClient = new TcpClient())
             {
                 tcpClient.Connect(IPAddress.Loopback, Port);
                 var stream = tcpClient.GetStream();
 
                 try
                 {
-                    while (true)
+                    //check if the server is online before beginning (handshake)
+                    if (!await EstablishConnection(stream))
+                    {
+                        return;
+                    }
+                }
+                catch (Exception)
+                {
+                    Console.WriteLine("Server is not available.");
+                    return;
+                }
+
+                while (true)
+                {
+                    try
                     {
                         ShowMenu();
 
                         var requestType = GetRequestType();
+
                         var request = BuildRequest(requestType);
 
                         await MakeRequest(stream, request);
@@ -35,13 +50,30 @@ namespace TcpServerClient
                         var response = await ReadResponse(stream);
 
                         PrintResponse(response);
+
+                        if (response.Details == "Server shutdown successful." || response.Status == 503) return;
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("Unknown error : {0}.", e.Message);
+                        return;
                     }
                 }
-                catch (Exception e)
-                {
-                    Console.WriteLine("Error : {0}.", e.Message);
-                }
             }
+        }
+
+        private static async Task<bool> EstablishConnection(Stream stream)
+        {
+            Console.WriteLine("Waiting for the connection to the server to be established...");
+            var connectionEstablishedResponse = await ReadResponse(stream);
+            if (connectionEstablishedResponse.Status != 200)
+            {
+                Console.WriteLine("Server is offline and a connection could not be established.");
+                return false;
+            }
+
+            Console.WriteLine("Connection established with success.");
+            return true;
         }
 
         private static void ShowMenu()
@@ -60,27 +92,27 @@ namespace TcpServerClient
 
         private static Request BuildRequest(int requestType)
         {
-            if (requestType == 1)
-            {
-                return RequestFactory.Create("path1");
-            }
+            string path;
+            int timeout;
 
-            if (requestType == 2)
+            switch (requestType)
             {
-                return RequestFactory.Send("path1", JObject.Parse("{Message: 'message'}"));
+                case 1:
+                    path = RequestAndGetPathFromInput();
+                    return RequestFactory.Create(path);
+                case 2:
+                    path = RequestAndGetPathFromInput();
+                    return RequestFactory.Send(path);
+                case 3:
+                    path = RequestAndGetPathFromInput();
+                    timeout = RequestAndGetTimeoutFromInput();
+                    return RequestFactory.Receive(path, timeout);
+                case 4:
+                    timeout = RequestAndGetTimeoutFromInput();
+                    return RequestFactory.Shutdown(timeout);
+                default:
+                    throw new InvalidOperationException();
             }
-
-            if (requestType == 3)
-            {
-                return RequestFactory.Receive("path1", 10000);
-            }
-
-            if (requestType == 4)
-            {
-                return RequestFactory.Shutdown();
-            }
-
-            throw new InvalidOperationException();
         }
 
         private static async Task MakeRequest(Stream stream, Request request)
@@ -120,7 +152,7 @@ namespace TcpServerClient
         {
             var stringBuilder = new StringBuilder();
 
-            stringBuilder.Append("Response received:\n");
+            stringBuilder.Append("\nResponse received:\n");
 
             stringBuilder.Append($"Status: {response.Status}.\n");
 
@@ -149,6 +181,20 @@ namespace TcpServerClient
             stringBuilder.Append($"Details: {response.Details}\n");
 
             Console.WriteLine(stringBuilder.ToString());
+        }
+
+        private static string RequestAndGetPathFromInput()
+        {
+            Console.Write("Path? ");
+            var path = Console.ReadLine();
+            return path;
+        }
+
+        private static int RequestAndGetTimeoutFromInput()
+        {
+            Console.Write("Timeout? ");
+            var timeout = Console.ReadLine();
+            return int.Parse(timeout ?? throw new InvalidOperationException());
         }
     }
 }

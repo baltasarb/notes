@@ -5,6 +5,8 @@ namespace TcpServerClient
 {
     public class RequestFactory
     {
+        private static int _sendMessageId;
+
         public static Request Create(string path)
         {
             return new Request()
@@ -16,14 +18,14 @@ namespace TcpServerClient
             };
         }
 
-        public static Request Send(string path, JObject toSend)
+        public static Request Send(string path)
         {
             return new Request()
             {
                 Path = path,
                 Headers = null,
                 Method = "Send",
-                Payload = toSend
+                Payload = JObject.Parse("{Message: 'message " + _sendMessageId++ + ".'}")
             };
         }
 
@@ -38,9 +40,15 @@ namespace TcpServerClient
             };
         }
 
-        public static Request Shutdown()
+        public static Request Shutdown(int timeout)
         {
-            return null;
+            return new Request()
+            {
+                Path = null,
+                Headers = new Dictionary<string, string> { { "timeout", timeout.ToString() } },
+                Method = "Shutdown",
+                Payload = null
+            };
         }
     }
 }

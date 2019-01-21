@@ -21,7 +21,7 @@ namespace TcpServer
         private readonly LinkedList<PendingMessage> _pendingProducers;
 
         //the object that will be kept in each list
-        private class PendingMessage : TaskCompletionSource<T>
+        public class PendingMessage : TaskCompletionSource<T>
         {
             public T Payload { get; set; }
             public Timer Timer { get; set; }
@@ -67,7 +67,7 @@ namespace TcpServer
         //task which will be complete only by a call to queue or timeout/cancellation occurs.
         public Task<T> Dequeue(TimeSpan timeout, CancellationTokenSource cancellationTokenSource)
         {
-            lock (_monitor)
+           lock (_monitor)
             {
                 PendingMessage pendingMessage;
 
@@ -129,7 +129,7 @@ namespace TcpServer
             node.Value.SetCanceled();
         }
 
-        public List<Task<T>> CancelTasks()
+        public LinkedList<PendingMessage> CancelAndGetQueueTasks()
         {
             lock (_monitor)
             {
@@ -137,6 +137,8 @@ namespace TcpServer
                 {
                     pendingConsumer.SetCanceled();
                 }
+
+                return _pendingConsumers;
             }
         }
     }

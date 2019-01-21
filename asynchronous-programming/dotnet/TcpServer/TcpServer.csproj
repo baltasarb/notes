@@ -50,12 +50,12 @@
   <ItemGroup>
     <Compile Include="ServerApplication.cs" />
     <Compile Include="AsyncQueue.cs" />
-    <Compile Include="ExceptionHandler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Request.cs" />
     <Compile Include="Response.cs" />
     <Compile Include="ResponseFactory.cs" />
     <Compile Include="Server.cs" />
+    <Compile Include="TaskWithWaitCancellation.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
