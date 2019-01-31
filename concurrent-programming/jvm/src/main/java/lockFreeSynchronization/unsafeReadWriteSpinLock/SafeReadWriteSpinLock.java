@@ -15,10 +15,15 @@ public class SafeReadWriteSpinLock {
 
     public void LockRead() throws InterruptedException {
         do {
-            if (state.decrementAndGet() >= 0)
-                return;
+            int observedState = state.get();
 
-            state.incrementAndGet();      //undo previous decrement
+            int valueToUpdate = observedState - 1;
+
+            if (valueToUpdate >= 0) {
+                if(state.compareAndSet(observedState, valueToUpdate)){
+                    return;
+                }
+            }
 
             do {
                 Thread.sleep(0);
@@ -46,11 +51,11 @@ public class SafeReadWriteSpinLock {
     }
 
     public void UnlockWrite() {
-        int observedState;
-
+        int observedState, valueToUpdate;
         do {
             observedState = state.get();
-        } while (!state.compareAndSet(observedState, observedState + UNLOCKED));
+            valueToUpdate = observedState + UNLOCKED;
+        } while (!state.compareAndSet(observedState, valueToUpdate));
     }
 
 }

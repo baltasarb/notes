@@ -3,6 +3,7 @@ package lockFreeSynchronization.unsafeRefCountedHolder;
 import sun.plugin.dom.exception.InvalidStateException;
 
 public class UnsafeRefCountedHolder<T> {
+
     private T value;
     private int refCount;
 
@@ -21,10 +22,10 @@ public class UnsafeRefCountedHolder<T> {
         if (refCount == 0)
             throw new InvalidStateException("");
         if (--refCount == 0) {
-            /*IDisposable disposable = value as IDisposable;
+            IDisposable disposable = (IDisposable) value;
             value = null;
             if (disposable != null)
-                disposable.Dispose();*/
+                disposable.dispose();
         }
     }
 
@@ -32,5 +33,10 @@ public class UnsafeRefCountedHolder<T> {
         if (refCount == 0)
             throw new InvalidStateException("");
         return value;
+    }
+
+    //Placeholder interface to allow compilation
+    private interface IDisposable {
+        void dispose();
     }
 }

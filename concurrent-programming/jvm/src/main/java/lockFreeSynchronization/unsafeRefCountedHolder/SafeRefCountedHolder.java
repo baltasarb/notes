@@ -3,46 +3,48 @@ package lockFreeSynchronization.unsafeRefCountedHolder;
 import sun.plugin.dom.exception.InvalidStateException;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class SafeRefCountedHolder<T> {
 
-    private AtomicReference<T> value;
+    private T value;
     private AtomicInteger refCount;
 
     public SafeRefCountedHolder(T v) {
-        value = new AtomicReference<>(v);
+        value = v;
         refCount = new AtomicInteger(1);
     }
 
     public void AddRef() {
-        while(true){
-            int obs = refCount.get();
-
-            if (obs == 0)
-                throw new InvalidStateException("");
-
-            if(refCount.compareAndSet(obs, obs + 1))
-                return;
-        }
+        if (refCount.get() == 0)
+            throw new InvalidStateException("");
+        refCount.incrementAndGet();
     }
 
     public void ReleaseRef() {
-        if (refCount.get() == 0)
-            throw new InvalidStateException("");
+        int observedRefCount = refCount.get();
 
-        if (refCount.decrementAndGet() == 0) {
-            //IDisposable disposable = value as IDisposable;
-            value.set(null);
-           /* if (disposable != null)
-                disposable.Dispose();*/
+        if(observedRefCount == 0){
+            throw new InvalidStateException("");
+        }
+
+        if(observedRefCount - 1 == 0){
+            if(refCount.compareAndSet(observedRefCount, observedRefCount - 1)){
+                IDisposable disposable = (IDisposable) value;
+                value = null;
+                if (disposable != null)
+                    disposable.dispose();
+            }
         }
     }
 
     public T getValue() {
         if (refCount.get() == 0)
             throw new InvalidStateException("");
-        return value.get();
+        return value;
     }
 
+    //Placeholder interface to allow compilation
+    private interface IDisposable {
+        void dispose();
+    }
 }

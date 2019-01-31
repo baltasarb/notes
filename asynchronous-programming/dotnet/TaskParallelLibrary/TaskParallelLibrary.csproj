@@ -44,9 +44,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App.cs" />
+    <Compile Include="AtLeastOccursParallel1718i2.cs" />
     <Compile Include="GetTopN.cs" />
     <Compile Include="MapReduceWithSaturate.cs" />
     <Compile Include="MapSelectedItems.cs" />
+    <Compile Include="ParallelMapSelected.cs" />
+    <Compile Include="ParallelSelect1718v.cs" />
     <Compile Include="ParallelSelectItems.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
