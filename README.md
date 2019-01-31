@@ -6,8 +6,6 @@ Disclaimer: information might not be 100% accurate. These are my personal notes.
 
 ## Table of contents
 
-* [Algorithms and Data Structures](https://github.com/baltasarb/notes/wiki/Algorithms-and-Data-Structures)
-    * [Exercises](https://github.com/baltasarb/notes/wiki/Algorithms-and-Data-Structures#exercises)
 * [Distributed Systems](https://github.com/baltasarb/notes/wiki/Distributed-Systems)
     * [Singleton and Singlecall](https://github.com/baltasarb/notes/wiki/Distributed-Systems#singlecall-and-singleton)
     * [Marshal by reference and Marshal by value](https://github.com/baltasarb/notes/wiki/Distributed-Systems#marshal-by-ref-and-marshal-by-value)
@@ -17,11 +15,8 @@ Disclaimer: information might not be 100% accurate. These are my personal notes.
         * [Synchronization with implicit and explicit monitors](https://github.com/baltasarb/notes/wiki/Concurrent-Programming#synchronization-with-implicit-and-explicit-monitors)
         * [Semi lock free synchronization](https://github.com/baltasarb/notes/wiki/Concurrent-Programming#semi-lock-free-synchronization)
         * [Lock free synchronization](https://github.com/baltasarb/notes/wiki/Concurrent-Programming#lock-free-synchronization)
-* [Spring MVC](https://github.com/baltasarb/notes/wiki/Spring-MVC)   
-* [Javascript]()
-* [Node]()
-* [React]()
-* [Visual Studio Code]()
+* [Node](https://github.com/baltasarb/notes/wiki/Node)
+* [Visual Studio Code](https://github.com/baltasarb/notes/wiki/Visual-Studio-Code)
 * [Web Application Development](https://github.com/baltasarb/notes/wiki/Web-Application-Development)
     * [Hypertext Transfer Protocol](https://github.com/baltasarb/notes/wiki/Web-Application-Development#hypertext-transfer-protocol)
     * [Hypermedia APIs](https://github.com/baltasarb/notes/wiki/Web-Application-Development#hypermedia-apis)
