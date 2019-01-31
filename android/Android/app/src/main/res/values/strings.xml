@@ -1,7 +1,0 @@
-<resources>
-    <string name="app_name">Android</string>
-    <string name="lifecycle_activity1_title">Activity 1</string>
-    <string name="lifecycle_go_to_activity2_button_text">Go to Activity 2</string>
-    <string name="lifecycle_activity_2_title">Activity 2</string>
-    <string name="lifecycle_go_to_activity_1_button_text">Go to Activity 1</string>
-</resources>
