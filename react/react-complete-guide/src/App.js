@@ -1,28 +1,59 @@
-//the reason react is imported is because iteration 1, behind the scenes, is equal to iteration 3.
-import React from 'react';
+import React, { useState } from 'react';
+import PersonWithProps from './Person/PersonWithProps';
+import PersonWithClickEvent from './Person/PersonWithClickEvent';
 import './App.css';
 
-function App() {
-  //Iteration 1
-  // return (
-  //   <div className="App">
-  //     <h1>React Application</h1>
-  //   </div>
-  // );
-  
-  //Iteration 2
-  //creates div with two lines of text inside
-  //cecause h1 and React Application are interpreted as text
-  //return React.createElement('div', null, 'h1', 'React Application'); 
+const App = props => {
+    const [personsState, setPersonsState] = useState({
+        persons: [
+            { name: 'Person1', age: 29 },
+            { name: 'Person2', age: 30 },
+            { name: 'Person3', age: 31 }
+        ]
+    });//use state returns array of length 2
 
-  //Iteration 2
-  //creates a div with an h1 tag inside, which haves React Application text inside
-  //the css is not considered
-  //return React.createElement('div', null, React.createElement('h1', null,  'React Application'));
+    const randomizePersonAges = () => {
+        const generateRandomAge = () => {
+            return Math.floor(Math.random() * 30);
+        }
+    
+        setPersonsState({
+            persons: [
+                { name: 'Person1', age: generateRandomAge() },
+                { name: 'Person2', age: generateRandomAge() },
+                { name: 'Person3', age: generateRandomAge() }
+            ]
+        });
+    };
 
-  //Iteration 3
-  //this code is the exact same code as iteration 1
-  return React.createElement('div', {className: 'App'}, React.createElement('h1', null, 'React Application'));
+    const randomizePersonAge = (age) => {
+        return Math.floor(Math.random() * age);
+    };
+
+    return (
+        <div className="App">
+            <h1>React Application</h1>
+            <button onClick={randomizePersonAges}>Randomize ages</button>
+            {createPersons(personsState.persons)}
+            <PersonWithClickEvent randomizeAge={randomizePersonAge} name="Person4" age="32"/>
+            <PersonWithClickEvent randomizeAge={randomizePersonAge} name="Person5" age="33"/>
+        </div>
+    )
+}
+
+function createPersons(persons) {
+    return persons.map(person => {
+        return createPerson(person);
+    })
+}
+
+function createPerson(person) {
+    return <PersonWithProps key={person.name + person.age} name={person.name} age={person.age} />;
 }
 
 export default App;
+
+
+
+
+
