@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import PersonWithProps from './Person/PersonWithProps';
-import PersonWithClickEvent from './Person/PersonWithClickEvent';
+import PersonWithProps from '../Person/PersonWithProps';
+import PersonWithClickEvent from '../Person/PersonWithClickEvent';
+import PersonWithInput from '../Person/PersonWithInput';
 import './App.css';
 
-const App = props => {
+const App = () => {
     const [personsState, setPersonsState] = useState({
         persons: [
             { name: 'Person1', age: 29 },
-            { name: 'Person2', age: 30 },
-            { name: 'Person3', age: 31 }
+            { name: 'Person2', age: 30 }
         ]
-    });//use state returns array of length 2
+    });
 
     const randomizePersonAges = () => {
         const generateRandomAge = () => {
@@ -36,7 +36,7 @@ const App = props => {
             <button onClick={randomizePersonAges}>Randomize ages</button>
             {createPersons(personsState.persons)}
             <PersonWithClickEvent randomizeAge={randomizePersonAge} name="Person4" age="32"/>
-            <PersonWithClickEvent randomizeAge={randomizePersonAge} name="Person5" age="33"/>
+            <PersonWithInput />
         </div>
     )
 }
