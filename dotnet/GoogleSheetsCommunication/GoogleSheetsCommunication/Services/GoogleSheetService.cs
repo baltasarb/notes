@@ -4,21 +4,25 @@
     using Google.Apis.Services;
     using Google.Apis.Sheets.v4;
     using Google.Apis.Sheets.v4.Data;
-    using Google.Apis.Util.Store;
     using System;
     using System.Collections.Generic;
     using System.IO;
-    using System.Threading;
     using System.Threading.Tasks;
 
     public class GoogleSheetService : IGoogleSheetService
     {
-        // If modifying these scopes, delete your previously saved credentials
-        // at ~/.credentials/sheets.googleapis.com-dotnet-quickstart.json
-        static string[] Scopes = { SheetsService.Scope.SpreadsheetsReadonly };
-        static string ApplicationName = "Google Sheets API .NET Quickstart";
+        private const string ErdnaseSpreadsheetId = "18I2eWy6qAdEcsmdoV2zupMuzzqsioCsSjjEqyOwBKkc";
+        private const string LazarusSpreadsheetId = "1kfCf59947tfKVGKULPmyk1YJ17IK_Ontgj4LcMWQjlM";
+        private const string ApplicationName = "peg-onboarding";
+        private readonly SheetsService SheetsService;
 
-        async Task  CreatePartnerhipAsync()
+        public GoogleSheetService()
+        {
+            //should it be initialized once or per request
+            this.SheetsService = InitializeSheetsService();
+        }
+
+        async Task CreatePartnerhipAsync()
         {
             await Task.Delay(10);
         }
@@ -28,18 +32,22 @@
             await Task.Delay(10);
         }
 
-        public void UnauthenticatedSheetReadingSample()
+        async Task AddPartnershipPermissions(string partnershipId, IEnumerable<string> emails)
+        {
+            await Task.Delay(10);
+        }
+
+        public void ApiAuthenticationSheetReadingSample()
         {
             var service = new SheetsService(new BaseClientService.Initializer
             {
-                ApplicationName = "Application",
-                ApiKey = "AIzaSyBsoy6q0r8WpGd7w3LRqkvsafRGsxQvWLg",
+                ApplicationName = ApplicationName,
+                ApiKey = "",
             });
 
-            var testSpreadsheetId = "18I2eWy6qAdEcsmdoV2zupMuzzqsioCsSjjEqyOwBKkc";
-            var testRange = "Sheet1!A1:B2";
+            var range = "Sheet1!A1:B2";
             SpreadsheetsResource.ValuesResource.GetRequest request =
-                    service.Spreadsheets.Values.Get(testSpreadsheetId, testRange);
+                    service.Spreadsheets.Values.Get(ErdnaseSpreadsheetId, range);
 
             // Prints the names and majors of students in a sample spreadsheet:
             // https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
@@ -47,61 +55,40 @@
             IList<IList<Object>> values = response.Values;
         }
 
-
-        public void AuthenticatedSheetReadingSample()
+        public void AuthenticationSheetReadingSample()
         {
-            var service = new SheetsService(new BaseClientService.Initializer
-            {
-                ApplicationName = "Application",
-                ApiKey = "AIzaSyBsoy6q0r8WpGd7w3LRqkvsafRGsxQvWLg",
-            });
-
-            var testSpreadsheetId = "18I2eWy6qAdEcsmdoV2zupMuzzqsioCsSjjEqyOwBKkc";
-            var testRange = "Sheet1!A1:B2";
+            var range = "Sheet1!A1:B2";
             SpreadsheetsResource.ValuesResource.GetRequest request =
-                    service.Spreadsheets.Values.Get(testSpreadsheetId, testRange);
+                    SheetsService.Spreadsheets.Values.Get(LazarusSpreadsheetId, range);
 
-            // Prints the names and majors of students in a sample spreadsheet:
-            // https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
             ValueRange response = request.Execute();
             IList<IList<Object>> values = response.Values;
         }
 
-        public void GoogleSample()
+        private SheetsService InitializeSheetsService()
         {
-            var service = new SheetsService(new BaseClientService.Initializer
+            var credentials = BuildCredentials();
+
+            return new SheetsService(new BaseClientService.Initializer()
             {
-                ApplicationName = "Gservice Test",
-                ApiKey = "AIzaSyBsoy6q0r8WpGd7w3LRqkvsafRGsxQvWLg",
+                HttpClientInitializer = credentials,
+                ApplicationName = ApplicationName
             });
+        }
 
-            //// Run the request.
-            //Console.WriteLine("Executing a list request...");
-            //var result = await service.Apis.List().ExecuteAsync();
-            var spreadsheetId = "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms";
-            var range = "Class Data!A2:E";
-            SpreadsheetsResource.ValuesResource.GetRequest request =
-                    service.Spreadsheets.Values.Get(spreadsheetId, range);
+        private GoogleCredential BuildCredentials()
+        {
+            GoogleCredential credentials;
+            string[] scopes = { SheetsService.Scope.Spreadsheets }; // Change this if you're accessing Drive or Docs
 
-            // Prints the names and majors of students in a sample spreadsheet:
-            // https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
-            ValueRange response = request.Execute();
-            IList<IList<Object>> values = response.Values;
-
-            if (values != null && values.Count > 0)
+            // Put your credentials json file in the root of the solution and make sure copy to output dir property is set to always copy 
+            using (var stream = new FileStream(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "credentials.json"),
+                FileMode.Open, FileAccess.Read))
             {
-                Console.WriteLine("Name, Major");
-                foreach (var row in values)
-                {
-                    // Print columns A and E, which correspond to indices 0 and 4.
-                    Console.WriteLine("{0}, {1}", row[0], row[4]);
-                }
+                credentials = GoogleCredential.FromStream(stream).CreateScoped(scopes);
             }
-            else
-            {
-                Console.WriteLine("No data found.");
-            }
-            Console.Read();
-        }
+
+            return credentials;
+        }    
     }
 }

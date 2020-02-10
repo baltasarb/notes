@@ -23,7 +23,15 @@
         public IActionResult Privacy()
         {
             var gs = new GoogleSheetService();
-            gs.Sample();
+
+            //gs.UnauthenticatedSheetReadingSample_ApiKey();
+
+            //gs.ServiceAccountSheetReadingSample();
+
+            //gs.ServiceAccountSheetReadingSample();
+
+            gs.AuthenticationSheetReadingSample();
+
             return View();
         }
 
