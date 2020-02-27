@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28307.168
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29326.143
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskBasedAsynchronousPattern", "TaskBasedAsynchronousPattern\TaskBasedAsynchronousPattern.csproj", "{AE9C4062-28F5-4A9A-AAC9-8F4B942FB8E8}"
 EndProject
@@ -12,6 +12,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TcpServer", "TcpServer\TcpServer.csproj", "{1704EDE1-3C2B-4955-838B-703130D0D4CC}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TcpServerClient", "TcpServerClient\TcpServerClient.csproj", "{ADD91F6B-09DA-4C14-AE46-1C37ED4AE2E7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskBasedAsynchronousPatternTests", "TaskBasedAsynchronousPatternTests\TaskBasedAsynchronousPatternTests.csproj", "{D094780F-B3F4-4E05-A086-7C8632C0C105}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TaskBasedAsynchPattern", "TaskBasedAsynchPattern", "{729FE88A-1FFE-4D02-B354-38F1E3B4CE62}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,9 +43,17 @@ Global
 		{ADD91F6B-09DA-4C14-AE46-1C37ED4AE2E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ADD91F6B-09DA-4C14-AE46-1C37ED4AE2E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ADD91F6B-09DA-4C14-AE46-1C37ED4AE2E7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D094780F-B3F4-4E05-A086-7C8632C0C105}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D094780F-B3F4-4E05-A086-7C8632C0C105}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D094780F-B3F4-4E05-A086-7C8632C0C105}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D094780F-B3F4-4E05-A086-7C8632C0C105}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{AE9C4062-28F5-4A9A-AAC9-8F4B942FB8E8} = {729FE88A-1FFE-4D02-B354-38F1E3B4CE62}
+		{D094780F-B3F4-4E05-A086-7C8632C0C105} = {729FE88A-1FFE-4D02-B354-38F1E3B4CE62}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DF00F6B9-5709-4C98-B3A9-2FFE1B43B616}
